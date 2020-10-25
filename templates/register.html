@@ -1,11 +1,15 @@
 {% extends "base.html" %}
-{% block title_content %}
-<h1>TITLE</h1>
+{% block title %}
+	Register
 {% endblock %}
 
 {% block content %}
+<form action="#" method="post">
 
-	{% for table in tables %}
-	            {{ table|safe }}
-	{% endfor %}
+	<p>Enter full name below:</p>
+	<p>	
+		<input type = "text"  name = "new_player" />
+	</p>
+	<p><input type = "submit" value = "submit"/></p>
+</form>
 {% endblock %}

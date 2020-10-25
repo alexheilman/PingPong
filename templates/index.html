@@ -1,11 +1,12 @@
 {% extends "base.html" %}
-{% block title_content %}
-<h1>TITLE</h1>
+{% block title %}
+	<u>Leaderboard</u>
 {% endblock %}
 
 {% block content %}
 
 	{% for table in tables %}
-	            {{ table|safe }}
+	    {{ table|safe }}
 	{% endfor %}
+
 {% endblock %}

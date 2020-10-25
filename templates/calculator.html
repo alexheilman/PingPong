@@ -1,16 +1,14 @@
 {% extends "base.html" %}
 {% block title %}
-	Submit Score
+Calculator
 {% endblock %}
 
 {% block content %}
 <form action="#" method="post">
 
-
-
-	<p>Enter score for each player below:</p>
+	<p>Calculate effect on ratings for a potential matchup:</p>
 	<p>	
-		<select name= p1_name  value= "test" method="GET" action="/">
+		<select name= p1_name  method="GET" action="/">
     	{% for player in players %}
     		<option SELECTED>
     			{{player}}
@@ -18,10 +16,9 @@
     	{% endfor %}
     	<option disabled selected value>Select Player</option>
 		</select>
-		<input type = "number" min ="0" max = "50" value = "0" step = "1" name = "p1_score" />
 	</p>
 	<p>	
-		<select name= p2_name  value= "test" method="GET" action="/">
+		<select name= p2_name  method="GET" action="/">
     	{% for player in players %}
     			<option SELECTED>
     			{{player}}
@@ -29,8 +26,28 @@
     	{% endfor %}
     	<option disabled selected value>Select Player</option>
 		</select>
-		<input type = "number" min ="0" max = "50" value = "0" step = "1" name = "p2_score" />
 	</p>
 	<p><input type = "submit" value = "submit"/></p>
+
+	<br>
+	{% if p1_name != p2_name%}
+		<table>
+			<tr>
+				<th>Player &emsp;&emsp;</th>
+    			<th>Win &emsp;&emsp;</th>
+    			<th>Lose &emsp;&emsp;</th>
+			</tr>
+			<tr>
+				<td>{{p1_name}} &emsp;&emsp;</td>
+				<td>+{{p1_win}}</td>
+				<td>{{p1_lose}}</td>
+			</tr>
+			<tr>
+				<td>{{p2_name}} &emsp;&emsp;</td>
+				<td>+{{p2_win}}</td>
+				<td>{{p2_lose}}</td>
+			</tr>
+		</table>
+	{% endif %}
 </form>
 {% endblock %}
