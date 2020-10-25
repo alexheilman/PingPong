@@ -28,7 +28,7 @@ gf = DownloadDF('game_history.csv')
 
 
 def UpdateLeaderboard(p1_name, p1_score, p2_name, p2_score):
-    global df
+    df = DownloadDF('leaderboards/_leaderboard.csv')
     #increment quantity of games played
     df.loc[df['Player'] == p1_name, 'Games'] += 1
     df.loc[df['Player'] == p2_name, 'Games'] += 1
@@ -72,7 +72,7 @@ def UpdateLeaderboard(p1_name, p1_score, p2_name, p2_score):
 
 
 def UpdateGameHistory(p1_name, p1_score, p2_name, p2_score):
-    global gf
+    df = DownloadDF('leaderboards/_leaderboard.csv')
     ts = str(datetime.datetime.now())
     ts_format = ts[:10] + "_" + ts[11:13] + "-" + ts[14:16] + "-" + ts[17:19]
 
@@ -88,7 +88,7 @@ def UpdateGameHistory(p1_name, p1_score, p2_name, p2_score):
 
 
 def AddPlayer(name):
-    global df
+    df = DownloadDF('leaderboards/_leaderboard.csv')
     df_row = pd.DataFrame( {df.columns[0]:name,
                             df.columns[1]:1500, 
                             df.columns[2]:0,
@@ -107,7 +107,7 @@ def AddPlayer(name):
 
 
 def CheckRatings(p1_name, p2_name):
-    global df
+    df = DownloadDF('leaderboards/_leaderboard.csv')
 
     #calculate ELO probability of each player winning
     p1_rating = df.loc[df['Player'] == p1_name, 'Rating'].values[0]
