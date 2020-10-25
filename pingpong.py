@@ -1,10 +1,30 @@
 from flask import Flask, redirect, url_for, render_template, request
 import pandas as pd
 import datetime
+import boto3
+from aws import S3_BUCKET, S3_KEY, S3_SECRET
+from io import StringIO
+import sys
 
 
-df = pd.read_csv('leaderboards/_leaderboard.csv', sep=',')
-gf = pd.read_csv('game_history.csv', sep=',')
+s3 = boto3.client('s3', aws_access_key_id = S3_KEY, aws_secret_access_key = S3_SECRET)
+
+def DownloadDF(filename):
+    csv_obj = s3.get_object(Bucket = S3_BUCKET, Key = filename)
+    body = csv_obj['Body']
+    csv_string = body.read().decode('utf-8')
+    df = pd.read_csv(StringIO(csv_string))
+    return df
+
+
+def UploadDF(df, filename):
+    csv_buffer = StringIO()
+    df.to_csv(csv_buffer, index = False)
+    s3.put_object(Bucket = S3_BUCKET , Body = csv_buffer.getvalue(),\
+                    Key= filename)
+
+df = DownloadDF('leaderboards/_leaderboard.csv')
+gf = DownloadDF('game_history.csv')
 
 
 def UpdateLeaderboard(p1_name, p1_score, p2_name, p2_score):
@@ -42,13 +62,13 @@ def UpdateLeaderboard(p1_name, p1_score, p2_name, p2_score):
         df.loc[df['Player'] == p1_name, 'Losses'] += 1
 
     df = df.sort_values(by=['Rating'], ascending = False)
-    df.to_csv('leaderboards/_leaderboard.csv', index = False)
+    UploadDF(df, 'leaderboards/_leaderboard.csv')
 
     # save a timestamped copy of the leaderboard
     ts = str(datetime.datetime.now())
     ts_format = ts[:10] + "_" + ts[11:13] + "-" + ts[14:16] + "-" + ts[17:19]
     filename = 'leaderboards/' + ts_format + ' leaderboard.csv'
-    df.to_csv(filename, index = False)
+    UploadDF(df, filename)
 
 
 def UpdateGameHistory(p1_name, p1_score, p2_name, p2_score):
@@ -74,17 +94,16 @@ def AddPlayer(name):
                             df.columns[2]:0,
                             df.columns[3]:0,
                             df.columns[4]:0}, index=[0])
-
     df = df.append(df_row)
-    df = df.sort_values(by=['Rating'], ascending = False)
 
-    df.to_csv('leaderboards/_leaderboard.csv', index = False)
+    df = df.sort_values(by=['Rating'], ascending = False)
+    UploadDF(df, 'leaderboards/_leaderboard.csv')
 
     # save a timestamped copy of the leaderboard
     ts = str(datetime.datetime.now())
     ts_format = ts[:10] + "_" + ts[11:13] + "-" + ts[14:16] + "-" + ts[17:19]
     filename = 'leaderboards/' + ts_format + ' leaderboard.csv'
-    df.to_csv(filename, index = False)
+    UploadDF(df, filename)
 
 
 def CheckRatings(p1_name, p2_name):
@@ -168,6 +187,14 @@ def calculator():
         return render_template("calculator.html", players = df.Player, \
             p1_win = p1_win, p1_lose = p1_lose, p2_win = p2_win, p2_lose= p2_lose,\
             p1_name = p1_name, p2_name = p2_name)
+
+@app.route('/files')
+def files():
+    s3_resource = boto3.resource('s3')
+    my_bucket = s3_resource.Bucket(S3_BUCKET)
+    summaries = my_bucket.objects.all()
+
+    return render_template('files.html', my_bucket=my_bucket, files=summaries)
 
 
 if __name__ == "__main__":
