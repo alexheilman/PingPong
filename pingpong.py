@@ -28,6 +28,7 @@ gf = DownloadDF('game_history.csv')
 
 
 def UpdateLeaderboard(p1_name, p1_score, p2_name, p2_score):
+    global df
     df = DownloadDF('leaderboards/_leaderboard.csv')
     #increment quantity of games played
     df.loc[df['Player'] == p1_name, 'Games'] += 1
@@ -72,7 +73,8 @@ def UpdateLeaderboard(p1_name, p1_score, p2_name, p2_score):
 
 
 def UpdateGameHistory(p1_name, p1_score, p2_name, p2_score):
-    df = DownloadDF('leaderboards/_leaderboard.csv')
+    global gf
+
     ts = str(datetime.datetime.now())
     ts_format = ts[:10] + "_" + ts[11:13] + "-" + ts[14:16] + "-" + ts[17:19]
 
@@ -84,11 +86,13 @@ def UpdateGameHistory(p1_name, p1_score, p2_name, p2_score):
 
     gf = gf.append(gf_row)
 
-    gf.to_csv('game_history.csv', index = False)
+    UploadDF(gf, 'game_history.csv')
 
 
 def AddPlayer(name):
+    global df
     df = DownloadDF('leaderboards/_leaderboard.csv')
+
     df_row = pd.DataFrame( {df.columns[0]:name,
                             df.columns[1]:1500, 
                             df.columns[2]:0,
@@ -107,6 +111,7 @@ def AddPlayer(name):
 
 
 def CheckRatings(p1_name, p2_name):
+    global df
     df = DownloadDF('leaderboards/_leaderboard.csv')
 
     #calculate ELO probability of each player winning
@@ -187,14 +192,6 @@ def calculator():
         return render_template("calculator.html", players = df.Player, \
             p1_win = p1_win, p1_lose = p1_lose, p2_win = p2_win, p2_lose= p2_lose,\
             p1_name = p1_name, p2_name = p2_name)
-
-@app.route('/files')
-def files():
-    s3_resource = boto3.resource('s3')
-    my_bucket = s3_resource.Bucket(S3_BUCKET)
-    summaries = my_bucket.objects.all()
-
-    return render_template('files.html', my_bucket=my_bucket, files=summaries)
 
 
 if __name__ == "__main__":
