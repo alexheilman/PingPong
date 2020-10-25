@@ -30,6 +30,7 @@ gf = DownloadDF('game_history.csv')
 def UpdateLeaderboard(p1_name, p1_score, p2_name, p2_score):
     global df
     df = DownloadDF('leaderboards/_leaderboard.csv')
+    
     #increment quantity of games played
     df.loc[df['Player'] == p1_name, 'Games'] += 1
     df.loc[df['Player'] == p2_name, 'Games'] += 1
@@ -138,6 +139,9 @@ app = Flask(__name__)
 
 @app.route("/", methods=["POST", "GET"])
 def home():
+    global df
+    df = DownloadDF('leaderboards/_leaderboard.csv')
+
     return render_template("index.html", tables=[df.to_html(index=False)])
 
 
