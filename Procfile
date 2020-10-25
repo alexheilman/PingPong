@@ -1,1 +1,1 @@
-web: gunicorn app:pingpong 
+web: gunicorn pingpong:app 
