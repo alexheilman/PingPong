@@ -2,10 +2,14 @@ from flask import Flask, redirect, url_for, render_template, request
 import pandas as pd
 import datetime
 import boto3
-from aws import S3_BUCKET, S3_KEY, S3_SECRET
+#from aws import S3_BUCKET, S3_KEY, S3_SECRET
 from io import StringIO
 import sys
 
+import os
+S3_BUCKET = os.environ.get('S3_BUCKET')
+S3_KEY = os.environ.get('S3_KEY')
+S3_SECRET= os.environ.get('S3_SECRET')
 
 s3 = boto3.client('s3', aws_access_key_id = S3_KEY, aws_secret_access_key = S3_SECRET)
 
