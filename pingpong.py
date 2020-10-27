@@ -1,4 +1,5 @@
 from flask import Flask, redirect, url_for, render_template, request
+import numpy as np
 import pandas as pd
 import datetime
 import boto3
@@ -38,6 +39,67 @@ def UploadDF(df, filename):
 df = DownloadDF('leaderboard.csv')
 gf = DownloadDF('game_history.csv')
 
+# Ratings populated from start to finish
+# Needed each time in case previous games need to be removed
+# because future ratings depend on previous ratings
+
+def PopulateRatings(df): 
+    for i in range(1, df.shape[0]):
+
+        # initialize everyone else's ranking from previous entry
+        for j in range(5, df.shape[1]):
+            df.iloc[i,j] = df.iloc[i-1,j]
+
+        # overwrite player 1 and player 2 rankings based on outcome
+        p1_name = df.iloc[i,1]
+        p1_score = df.iloc[i,2]
+        p2_name = df.iloc[i,3]
+        p2_score = df.iloc[i,4]
+
+        #calculate ELO probability of each player winning
+        p1_rating = df.iloc[i-1, np.where(df.columns.values == p1_name)[0][0]]
+        p2_rating = df.iloc[i-1, np.where(df.columns.values == p2_name)[0][0]]
+
+        prob_p1_win = 1/(1+10**((p2_rating-p1_rating)/400))
+        prob_p2_win = 1/(1+10**((p1_rating-p2_rating)/400))
+
+
+        if p1_score > p2_score:
+            #update player ratings
+            df.iloc[i, np.where(df.columns.values == p1_name)[0][0]] = p1_rating + round(32*(1-prob_p1_win))
+            df.iloc[i, np.where(df.columns.values == p2_name)[0][0]] = p2_rating + round(32*(0-prob_p2_win))
+        elif p1_score == p2_score:
+            pass
+        else:
+            #update player ratings
+            df.iloc[i, np.where(df.columns.values == p1_name)[0][0]] = p1_rating + round(32*(0-prob_p1_win))
+            df.iloc[i, np.where(df.columns.values == p2_name)[0][0]] = p2_rating + round(32*(1-prob_p2_win))
+
+    return df
+
+
+def GameLogToLeaderboard(df):
+    board = pd.DataFrame(columns = ['Player', 'Rating', 'Games', 'Wins', 'Losses'])
+
+    for i in range(5, df.shape[1]):
+        wins = 0
+        for j in range(1, df.shape[0]):
+            if df.iloc[j,i] > df.iloc[j-1,i]:
+                wins += 1
+        losses = 0
+        for j in range(1, df.shape[0]):
+            if df.iloc[j,i] < df.iloc[j-1,i]:
+                losses += 1
+
+        row = pd.DataFrame([[df.columns.values[i], df.iloc[-1,i], wins+losses, wins, losses]], \
+            columns = ['Player', 'Rating', 'Games', 'Wins', 'Losses'])
+
+        board = pd.concat([board,row])
+
+    board = board.sort_values(by=['Rating'], ascending = False)
+
+    return board
+'''
 def UpdateLeaderboard(p1_name, p1_score, p2_name, p2_score):
     global df
     df = DownloadDF('leaderboard.csv')
@@ -100,7 +162,7 @@ def UpdateGameHistory(p1_name, p1_score, p2_name, p2_score):
 
     UploadDF(gf, 'game_history.csv')
 
-
+'''
 def AddPlayer(name):
     global df
     df = DownloadDF('leaderboard.csv')
@@ -150,10 +212,11 @@ app = Flask(__name__)
 
 @app.route("/", methods=["POST", "GET"])
 def home():
-    global df
-    df = DownloadDF('leaderboard.csv')
+    df = DownloadDF('game_log.csv')
+    df = PopulateRatings(df)
+    df2 = GameLogToLeaderboard(df)
 
-    return render_template("index.html", tables=[df.to_html(index=False)])
+    return render_template("index.html", tables=[df2.to_html(index=False)])
 
 
 @app.route("/register", methods=["POST", "GET"])
