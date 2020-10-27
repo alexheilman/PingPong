@@ -6,11 +6,14 @@ from io import StringIO
 import sys
 import os
 
+
+# ----------
+#   AWS S3
+# ----------
+
 S3_BUCKET = os.environ.get('S3_BUCKET')
 S3_KEY = os.environ.get('S3_KEY')
 S3_SECRET= os.environ.get('S3_SECRET')
-
-
 
 s3 = boto3.client('s3', aws_access_key_id = S3_KEY, aws_secret_access_key = S3_SECRET)
 
@@ -28,13 +31,16 @@ def UploadDF(df, filename):
     s3.put_object(Bucket = S3_BUCKET , Body = csv_buffer.getvalue(),\
                     Key= filename)
 
-df = DownloadDF('leaderboards/_leaderboard.csv')
-gf = DownloadDF('game_history.csv')
 
+# -------------
+#   Functions
+# -------------
+df = DownloadDF('leaderboard.csv')
+gf = DownloadDF('game_history.csv')
 
 def UpdateLeaderboard(p1_name, p1_score, p2_name, p2_score):
     global df
-    df = DownloadDF('leaderboards/_leaderboard.csv')
+    df = DownloadDF('leaderboard.csv')
     
     #increment quantity of games played
     df.loc[df['Player'] == p1_name, 'Games'] += 1
@@ -69,7 +75,7 @@ def UpdateLeaderboard(p1_name, p1_score, p2_name, p2_score):
         df.loc[df['Player'] == p1_name, 'Losses'] += 1
 
     df = df.sort_values(by=['Rating'], ascending = False)
-    UploadDF(df, 'leaderboards/_leaderboard.csv')
+    UploadDF(df, 'leaderboard.csv')
 
     # save a timestamped copy of the leaderboard
     ts = str(datetime.datetime.now())
@@ -97,7 +103,7 @@ def UpdateGameHistory(p1_name, p1_score, p2_name, p2_score):
 
 def AddPlayer(name):
     global df
-    df = DownloadDF('leaderboards/_leaderboard.csv')
+    df = DownloadDF('leaderboard.csv')
 
     df_row = pd.DataFrame( {df.columns[0]:name,
                             df.columns[1]:1500, 
@@ -107,7 +113,7 @@ def AddPlayer(name):
     df = df.append(df_row)
 
     df = df.sort_values(by=['Rating'], ascending = False)
-    UploadDF(df, 'leaderboards/_leaderboard.csv')
+    UploadDF(df, 'leaderboard.csv')
 
     # save a timestamped copy of the leaderboard
     ts = str(datetime.datetime.now())
@@ -118,7 +124,7 @@ def AddPlayer(name):
 
 def CheckRatings(p1_name, p2_name):
     global df
-    df = DownloadDF('leaderboards/_leaderboard.csv')
+    df = DownloadDF('leaderboard.csv')
 
     #calculate ELO probability of each player winning
     p1_rating = df.loc[df['Player'] == p1_name, 'Rating'].values[0]
@@ -145,7 +151,7 @@ app = Flask(__name__)
 @app.route("/", methods=["POST", "GET"])
 def home():
     global df
-    df = DownloadDF('leaderboards/_leaderboard.csv')
+    df = DownloadDF('leaderboard.csv')
 
     return render_template("index.html", tables=[df.to_html(index=False)])
 
