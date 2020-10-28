@@ -36,17 +36,14 @@ def UploadDF(df, filename):
 # -------------
 #   Functions
 # -------------
-df = DownloadDF('leaderboard.csv')
-gf = DownloadDF('game_history.csv')
 
 # Ratings populated from start to finish
 # Needed each time in case previous games need to be removed
 # because future ratings depend on previous ratings
-
 def PopulateRatings(df): 
     for i in range(1, df.shape[0]):
 
-        # initialize everyone else's ranking from previous entry
+        # initialize everyone else's ranking from their previous ranking
         for j in range(5, df.shape[1]):
             df.iloc[i,j] = df.iloc[i-1,j]
 
@@ -63,15 +60,13 @@ def PopulateRatings(df):
         prob_p1_win = 1/(1+10**((p2_rating-p1_rating)/400))
         prob_p2_win = 1/(1+10**((p1_rating-p2_rating)/400))
 
-
+        #update player ratings
         if p1_score > p2_score:
-            #update player ratings
             df.iloc[i, np.where(df.columns.values == p1_name)[0][0]] = p1_rating + round(32*(1-prob_p1_win))
             df.iloc[i, np.where(df.columns.values == p2_name)[0][0]] = p2_rating + round(32*(0-prob_p2_win))
         elif p1_score == p2_score:
             pass
         else:
-            #update player ratings
             df.iloc[i, np.where(df.columns.values == p1_name)[0][0]] = p1_rating + round(32*(0-prob_p1_win))
             df.iloc[i, np.where(df.columns.values == p2_name)[0][0]] = p2_rating + round(32*(1-prob_p2_win))
 
@@ -81,6 +76,7 @@ def PopulateRatings(df):
 def GameLogToLeaderboard(df):
     board = pd.DataFrame(columns = ['Player', 'Rating', 'Games', 'Wins', 'Losses'])
 
+    # pull data from game_log for every player [i]
     for i in range(5, df.shape[1]):
         wins = 0
         for j in range(1, df.shape[0]):
@@ -91,7 +87,7 @@ def GameLogToLeaderboard(df):
             if df.iloc[j,i] < df.iloc[j-1,i]:
                 losses += 1
 
-        row = pd.DataFrame([[df.columns.values[i], df.iloc[-1,i], wins+losses, wins, losses]], \
+        row = pd.DataFrame([[df.columns.values[i], int(df.iloc[-1,i]), wins+losses, wins, losses]], \
             columns = ['Player', 'Rating', 'Games', 'Wins', 'Losses'])
 
         board = pd.concat([board,row])
@@ -99,98 +95,46 @@ def GameLogToLeaderboard(df):
     board = board.sort_values(by=['Rating'], ascending = False)
 
     return board
-'''
-def UpdateLeaderboard(p1_name, p1_score, p2_name, p2_score):
-    global df
-    df = DownloadDF('leaderboard.csv')
-    
-    #increment quantity of games played
-    df.loc[df['Player'] == p1_name, 'Games'] += 1
-    df.loc[df['Player'] == p2_name, 'Games'] += 1
 
 
-    #calculate ELO probability of each player winning
-    p1_rating = df.loc[df['Player'] == p1_name, 'Rating'].values[0]
-    p2_rating = df.loc[df['Player'] == p2_name, 'Rating'].values[0]
-
-    prob_p1_win = 1/(1+10**((p2_rating-p1_rating)/400))
-    prob_p2_win = 1/(1+10**((p1_rating-p2_rating)/400))
-
-
-    if p1_score > p2_score:
-        #update player ratings
-        df.loc[df['Player'] == p1_name, 'Rating'] = p1_rating + round(32*(1-prob_p1_win))
-        df.loc[df['Player'] == p2_name, 'Rating'] = p2_rating + round(32*(0-prob_p2_win))
-
-        #increment wins and losses accordingly
-        df.loc[df['Player'] == p1_name, 'Wins'] += 1
-        df.loc[df['Player'] == p2_name, 'Losses'] += 1
-    elif p1_score == p2_score:
-        pass
-    else:
-        #update player ratings
-        df.loc[df['Player'] == p2_name, 'Rating'] = p2_rating + round(32*(1-prob_p2_win))
-        df.loc[df['Player'] == p1_name, 'Rating'] = p1_rating + round(32*(0-prob_p1_win))
-
-        #increment wins and losses accordingly
-        df.loc[df['Player'] == p2_name, 'Wins'] += 1
-        df.loc[df['Player'] == p1_name, 'Losses'] += 1
-
-    df = df.sort_values(by=['Rating'], ascending = False)
-    UploadDF(df, 'leaderboard.csv')
-
-    # save a timestamped copy of the leaderboard
-    ts = str(datetime.datetime.now())
-    ts_format = ts[:10] + "_" + ts[11:13] + "-" + ts[14:16] + "-" + ts[17:19]
-    filename = 'leaderboards/' + ts_format + ' leaderboard.csv'
-    UploadDF(df, filename)
-
-
-def UpdateGameHistory(p1_name, p1_score, p2_name, p2_score):
-    global gf
-
-    ts = str(datetime.datetime.now())
-    ts_format = ts[:10] + "_" + ts[11:13] + "-" + ts[14:16] + "-" + ts[17:19]
-
-    gf_row = pd.DataFrame( {gf.columns[0]:ts_format,
-                            gf.columns[1]:p1_name, 
-                            gf.columns[2]:p1_score,
-                            gf.columns[3]:p2_name,
-                            gf.columns[4]:p2_score}, index=[0])
-
-    gf = gf.append(gf_row)
-
-    UploadDF(gf, 'game_history.csv')
-
-'''
 def AddPlayer(name):
-    global df
-    df = DownloadDF('leaderboard.csv')
+    gl = DownloadDF('game_log.csv')
 
-    df_row = pd.DataFrame( {df.columns[0]:name,
-                            df.columns[1]:1500, 
-                            df.columns[2]:0,
-                            df.columns[3]:0,
-                            df.columns[4]:0}, index=[0])
-    df = df.append(df_row)
+    if name not in gl.columns.values[5:]:
+        gl[name] = np.nan
+        gl.iloc[0, gl.shape[1]-1] = 1500
+    else:
+        pass
 
-    df = df.sort_values(by=['Rating'], ascending = False)
-    UploadDF(df, 'leaderboard.csv')
+    UploadDF(gl, 'game_log.csv')
 
-    # save a timestamped copy of the leaderboard
+
+def SubmitScore(p1_name, p1_score, p2_name, p2_score):
+    gl = DownloadDF('game_log.csv')
+
+    # empty new row
+    gl = gl.reindex(gl.index.tolist() + list(range(gl.shape[0], gl.shape[0]+1)))
+
     ts = str(datetime.datetime.now())
-    ts_format = ts[:10] + "_" + ts[11:13] + "-" + ts[14:16] + "-" + ts[17:19]
-    filename = 'leaderboards/' + ts_format + ' leaderboard.csv'
-    UploadDF(df, filename)
+    ts_format = ts[:10] + "_" + str(int(ts[11:13])-5) + ":" + ts[14:16]
+
+    gl.iloc[-1,0] = ts_format
+    gl.iloc[-1,1] = p1_name
+    gl.iloc[-1,2] = p1_score
+    gl.iloc[-1,3] = p2_name
+    gl.iloc[-1,4] = p2_score
+
+    UploadDF(gl, 'game_log.csv')
 
 
 def CheckRatings(p1_name, p2_name):
-    global df
-    df = DownloadDF('leaderboard.csv')
-
+    gl = DownloadDF('game_log.csv')
+    gl = PopulateRatings(gl)
+    lb = GameLogToLeaderboard(gl)
+    
     #calculate ELO probability of each player winning
-    p1_rating = df.loc[df['Player'] == p1_name, 'Rating'].values[0]
-    p2_rating = df.loc[df['Player'] == p2_name, 'Rating'].values[0]
+    p1_rating = lb.loc[lb['Player'] == p1_name, 'Rating'].values[0]
+    p2_rating = lb.loc[lb['Player'] == p2_name, 'Rating'].values[0]
 
     prob_p1_win = 1/(1+10**((p2_rating-p1_rating)/400))
     prob_p2_win = 1/(1+10**((p1_rating-p2_rating)/400))
@@ -204,19 +148,25 @@ def CheckRatings(p1_name, p2_name):
     return p1_win, p1_lose, p2_win, p2_lose
 
 
-
 # ---------
 #   Flask
 # ---------
 app = Flask(__name__)
 
+player_list = []
+
 @app.route("/", methods=["POST", "GET"])
 def home():
-    df = DownloadDF('game_log.csv')
-    df = PopulateRatings(df)
-    df2 = GameLogToLeaderboard(df)
+    gl = DownloadDF('game_log.csv')
+    gl = PopulateRatings(gl)
+    lb = GameLogToLeaderboard(gl)
 
-    return render_template("index.html", tables=[df2.to_html(index=False)])
+    # registration completion routes home, update global players list
+    # for use in "Submit Score" page to save a AWS pull request
+    global player_list
+    player_list = lb['Player']
+
+    return render_template("index.html", tables=[lb.to_html(index=False)])
 
 
 @app.route("/register", methods=["POST", "GET"])
@@ -239,12 +189,10 @@ def submit():
 
         # don't update leaderboard if score is a player vs themself
         if p1_name != p2_name:
-            UpdateLeaderboard(p1_name, p1_score, p2_name, p2_score)
-            UpdateGameHistory(p1_name, p1_score, p2_name, p2_score)
-        
+            SubmitScore(p1_name, p1_score, p2_name, p2_score)
         return redirect(url_for("home"))
     else:
-        return render_template("submit_score.html", players = df.Player)
+        return render_template("submit_score.html", players = player_list)
 
 
 @app.route("/calculator", methods=["POST", "GET"])
@@ -262,14 +210,11 @@ def calculator():
 
         p1_win, p1_lose, p2_win, p2_lose = CheckRatings(p1_name, p2_name)
         
-        return render_template("calculator.html", players = df.Player, \
+        return render_template("calculator.html", players = player_list, \
             p1_win = p1_win, p1_lose = p1_lose, p2_win = p2_win, p2_lose= p2_lose,\
             p1_name = p1_name, p2_name = p2_name)
-        #return redirect(url_for("calculator"))
     else:
-        return render_template("calculator.html", players = df.Player, \
-            p1_win = p1_win, p1_lose = p1_lose, p2_win = p2_win, p2_lose= p2_lose,\
-            p1_name = p1_name, p2_name = p2_name)
+        return render_template("calculator.html", players = player_list)
 
 
 if __name__ == "__main__":
