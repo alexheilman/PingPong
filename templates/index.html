@@ -9,4 +9,20 @@
 	    {{ table|safe }}
 	{% endfor %}
 
+
+<form action="" method="post">
+	<br>
+	<p>View player game history</p>
+	<p>	
+		<select name= player  value= "test" method="GET" action="/">
+    	{% for player in players %}
+    		<option SELECTED>
+    			{{player}}
+    		</option>"
+    	{% endfor %}
+    	<option disabled selected value>Select Player</option>
+		</select>
+		<input type = "submit" value = "submit"/>
+	</p>
+</form>
 {% endblock %}

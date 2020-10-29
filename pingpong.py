@@ -29,8 +29,7 @@ def DownloadDF(filename):
 def UploadDF(df, filename):
     csv_buffer = StringIO()
     df.to_csv(csv_buffer, index = False)
-    s3.put_object(Bucket = S3_BUCKET , Body = csv_buffer.getvalue(),\
-                    Key= filename)
+    s3.put_object(Bucket = S3_BUCKET , Body = csv_buffer.getvalue(), Key= filename)
 
 
 # -------------
@@ -164,9 +163,15 @@ def home():
     # registration completion routes home, update global players list
     # for use in "Submit Score" page to save a AWS pull request
     global player_list
-    player_list = lb['Player']
+    player_list = lb.sort_values(by=['Player'])
+    player_list = player_list['Player']
 
-    return render_template("index.html", tables=[lb.to_html(index=False)])
+    if request.method == "POST":
+        player = request.form.get("player")
+        return redirect(url_for("user", name=player))
+    else:
+        return render_template("index.html", players = player_list,\
+                                tables=[lb.to_html(index=False)])
 
 
 @app.route("/register", methods=["POST", "GET"])
@@ -216,6 +221,16 @@ def calculator():
     else:
         return render_template("calculator.html", players = player_list)
 
+
+@app.route("/<name>")
+def user(name):
+    gl = DownloadDF('game_log.csv')
+    ul = gl.loc[(gl['P1_Name'] == name) | (gl['P2_Name'] == name)]
+    ul = ul.iloc[:,:5]
+    ul = ul.astype({'P1_Score':int, 'P2_Score':int})
+
+    return render_template("player_page.html", player = name, \
+                            tables=[ul.to_html(index=False)])
 
 if __name__ == "__main__":
     app.run(debug=True)

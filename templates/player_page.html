@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}
+	{{player}}
+{% endblock %}
+
+{% block content %}
+
+	{% for table in tables %}
+	    {{ table|safe }}
+	{% endfor %}
+
+{% endblock %}
