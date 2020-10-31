@@ -9,6 +9,12 @@
 	    {{ table|safe }}
 	{% endfor %}
 
+<br>
+<p> Recent Games </p>
+	{% for recent in recents %}
+	    {{ recent|safe }}
+	{% endfor %}
+
 
 <form action="" method="post">
 	<br>
@@ -25,4 +31,6 @@
 		<input type = "submit" value = "submit"/>
 	</p>
 </form>
+
+
 {% endblock %}

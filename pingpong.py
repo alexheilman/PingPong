@@ -77,24 +77,26 @@ def GameLogToLeaderboard(gl):
 
     # pull data from game_log for every player [i]
     for i in range(5, gl.shape[1]):
-        # Compute wins and losses
+        board = board.reindex(board.index.tolist() + list(range(board.shape[0], board.shape[0]+1)))
         player_name = gl.columns.values[i]
+        board.iloc[i-5, board.columns.get_loc('Player')] = player_name
+        board.iloc[i-5, board.columns.get_loc('ELO Rating')] = int(gl.iloc[-1,i])
+
+        # Compute wins 
         wins = 0
         for j in range(1, gl.shape[0]):
             if gl.iloc[j,i] > gl.iloc[j-1,i]:
                 wins += 1
+        board.iloc[i-5, board.columns.get_loc('Wins')] = wins
+
+        # Compute losses
         losses = 0
         for j in range(1, gl.shape[0]):
             if gl.iloc[j,i] < gl.iloc[j-1,i]:
                 losses += 1
+        board.iloc[i-5, board.columns.get_loc('Losses')] = losses        
 
-        board = board.reindex(board.index.tolist() + list(range(board.shape[0], board.shape[0]+1)))
-        board.iloc[i-5, board.columns.get_loc('ELO Rating')] = int(gl.iloc[-1,i])
-        board.iloc[i-5, board.columns.get_loc('Player')] = player_name
-        board.iloc[i-5, board.columns.get_loc('Wins')] = wins
-        board.iloc[i-5, board.columns.get_loc('Losses')] = losses
-
-        # Calculate Strength of Schedule
+        # Calculate average opponent ELO rating
         ul = gl.loc[(gl['P1_Name'] == player_name) | (gl['P2_Name'] == player_name)]
         ul = ul.iloc[:,:5]
         opponent_sum = 0 
@@ -204,6 +206,7 @@ def CheckRatings(p1_name, p2_name):
 
     return p1_win, p1_lose, p2_win, p2_lose, p1_win_rank, p1_lose_rank, p2_win_rank, p2_lose_rank
 
+
 # ---------
 #   Flask
 # ---------
@@ -217,6 +220,11 @@ def home():
     gl = PopulateRatings(gl)
     lb = GameLogToLeaderboard(gl)
 
+    # Pull most recent 10 games to display on homepage
+    gl_recent = gl.iloc[-11:-1, :5]
+    gl_recent = gl_recent.astype({'P1_Score':int, 'P2_Score':int})
+    gl_recent = gl_recent.sort_values(by=['Timestamp'], ascending = False)
+
     # registration completion routes home, update global players list
     # for use in "Submit Score" page to save a AWS pull request
     global player_list
@@ -228,7 +236,7 @@ def home():
         return redirect(url_for("user", name=player))
     else:
         return render_template("index.html", players = player_list,\
-                                tables=[lb.to_html(index=False)])
+                tables=[lb.to_html(index=False)], recents=[gl_recent.to_html(index=False)])
 
 
 @app.route("/register", methods=["POST", "GET"])
@@ -250,7 +258,7 @@ def submit():
         p2_name = request.form.get("p2_name")
 
         # don't update leaderboard if score is a player vs themself
-        if p1_name != p2_name:
+        if (p1_name != p2_name):
             SubmitScore(p1_name, p1_score, p2_name, p2_score)
         return redirect(url_for("home"))
     else:
