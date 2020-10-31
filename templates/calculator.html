@@ -34,18 +34,33 @@ Calculator
 		<table>
 			<tr>
 				<th>Player &emsp;&emsp;</th>
+				<th>Stat &emsp;&emsp;</th>
     			<th>Win &emsp;&emsp;</th>
     			<th>Lose &emsp;&emsp;</th>
 			</tr>
 			<tr>
 				<td>{{p1_name}} &emsp;&emsp;</td>
-				<td>+{{p1_win}}</td>
+				<td>Δ Composite &emsp;&emsp;</td>
+				<td>{{p1_win}}</td>
 				<td>{{p1_lose}}</td>
 			</tr>
 			<tr>
+				<td>&emsp;&emsp;</td>
+				<td>New Rank &emsp;&emsp;</td>
+				<td>{{p1_win_rank}}</td>
+				<td>{{p1_lose_rank}}</td>
+			</tr>
+			<tr>
 				<td>{{p2_name}} &emsp;&emsp;</td>
-				<td>+{{p2_win}}</td>
+				<td>Δ Composite &emsp;&emsp;</td>
+				<td>{{p2_win}}</td>
 				<td>{{p2_lose}}</td>
+			</tr>
+			<tr>
+				<td>&emsp;&emsp;</td>
+				<td>New Rank &emsp;&emsp;</td>
+				<td>{{p2_win_rank}}</td>
+				<td>{{p2_lose_rank}}</td>
 			</tr>
 		</table>
 	{% endif %}

@@ -52,47 +52,78 @@ def PopulateRatings(df):
         p2_name = df.iloc[i,3]
         p2_score = df.iloc[i,4]
 
-        #calculate ELO probability of each player winning
-        p1_rating = df.iloc[i-1, np.where(df.columns.values == p1_name)[0][0]]
-        p2_rating = df.iloc[i-1, np.where(df.columns.values == p2_name)[0][0]]
+        # calculate ELO probability of each player winning
+        p1_rating = df.iloc[i-1, df.columns.get_loc(p1_name)]
+        p2_rating = df.iloc[i-1, df.columns.get_loc(p2_name)]
 
         prob_p1_win = 1/(1+10**((p2_rating-p1_rating)/400))
         prob_p2_win = 1/(1+10**((p1_rating-p2_rating)/400))
 
-        #update player ratings
+        # update player ratings
         if p1_score > p2_score:
-            df.iloc[i, np.where(df.columns.values == p1_name)[0][0]] = p1_rating + round(32*(1-prob_p1_win))
-            df.iloc[i, np.where(df.columns.values == p2_name)[0][0]] = p2_rating + round(32*(0-prob_p2_win))
+            df.iloc[i, df.columns.get_loc(p1_name)] = p1_rating + round(32*(1-prob_p1_win))
+            df.iloc[i, df.columns.get_loc(p2_name)] = p2_rating + round(32*(0-prob_p2_win))
         elif p1_score == p2_score:
             pass
         else:
-            df.iloc[i, np.where(df.columns.values == p1_name)[0][0]] = p1_rating + round(32*(0-prob_p1_win))
-            df.iloc[i, np.where(df.columns.values == p2_name)[0][0]] = p2_rating + round(32*(1-prob_p2_win))
+            df.iloc[i, df.columns.get_loc(p1_name)] = p1_rating + round(32*(0-prob_p1_win))
+            df.iloc[i, df.columns.get_loc(p2_name)] = p2_rating + round(32*(1-prob_p2_win))
 
     return df
 
 
-def GameLogToLeaderboard(df):
-    board = pd.DataFrame(columns = ['Player', 'Rating', 'Games', 'Wins', 'Losses'])
+def GameLogToLeaderboard(gl):
+    board = pd.DataFrame(columns = ['Rank','Composite Rating','Player','ELO Rating', 'Avg Opponent', 'Wins', 'Losses'])
 
     # pull data from game_log for every player [i]
-    for i in range(5, df.shape[1]):
+    for i in range(5, gl.shape[1]):
+        player_name = gl.columns.values[i]
         wins = 0
-        for j in range(1, df.shape[0]):
-            if df.iloc[j,i] > df.iloc[j-1,i]:
+        for j in range(1, gl.shape[0]):
+            if gl.iloc[j,i] > gl.iloc[j-1,i]:
                 wins += 1
         losses = 0
-        for j in range(1, df.shape[0]):
-            if df.iloc[j,i] < df.iloc[j-1,i]:
+        for j in range(1, gl.shape[0]):
+            if gl.iloc[j,i] < gl.iloc[j-1,i]:
                 losses += 1
 
-        row = pd.DataFrame([[df.columns.values[i], int(df.iloc[-1,i]), wins+losses, wins, losses]], \
-            columns = ['Player', 'Rating', 'Games', 'Wins', 'Losses'])
+        board = board.reindex(board.index.tolist() + list(range(board.shape[0], board.shape[0]+1)))
+        board.iloc[i-5, board.columns.get_loc('ELO Rating')] = int(gl.iloc[-1,i])
+        board.iloc[i-5, board.columns.get_loc('Player')] = player_name
+        board.iloc[i-5, board.columns.get_loc('Wins')] = wins
+        board.iloc[i-5, board.columns.get_loc('Losses')] = losses
 
-        board = pd.concat([board,row])
+    # Calculate Strength of Schedule
+        ul = gl.loc[(gl['P1_Name'] == player_name) | (gl['P2_Name'] == player_name)]
+        ul = ul.iloc[:,:5]
+        #ul = ul.astype({'P1_Score':int, 'P2_Score':int})
+        opponent_sum = 0 
+        for j in range(0, ul.shape[0]):
+            if ul.iloc[j,1] == player_name:
+                opponent_sum = opponent_sum + gl.iloc[-1, gl.columns.get_loc(ul.iloc[j,3])]
+            if ul.iloc[j,3] == player_name:
+                opponent_sum = opponent_sum + gl.iloc[-1, gl.columns.get_loc(ul.iloc[j,1])]
+        # handle DIV/0 for newly registered players
+        if ul.shape[0] > 0:
+            board.iloc[i-5, np.where(board.columns.values == 'Avg Opponent')[0][0]] \
+                = round(opponent_sum / ul.shape[0])
+        else:
+            board.iloc[i-5, np.where(board.columns.values == 'Avg Opponent')[0][0]] = 0
 
-    board = board.sort_values(by=['Rating'], ascending = False)
+    # Calculate composite rating [Rating + (Avg Opponent - 1500)]
+        board.iloc[i-5, board.columns.get_loc('Composite Rating')] \
+            = int(board.iloc[i-5, board.columns.get_loc('ELO Rating')] \
+            + 0.5*(board.iloc[i-5, board.columns.get_loc('Avg Opponent')] - 1500))
 
+    board = board.sort_values(by=['Composite Rating'], ascending = False)
+
+    # Add Rank Labels
+    board.iloc[0, board.columns.get_loc('Rank')] = 1
+    for i in range(1,board.shape[0]):
+        if board.iloc[i, board.columns.get_loc('Composite Rating')] < board.iloc[i-1, board.columns.get_loc('Composite Rating')]:
+            board.iloc[i, board.columns.get_loc('Rank')] = board.iloc[i-1, board.columns.get_loc('Rank')] + 1
+        else:
+            board.iloc[i, board.columns.get_loc('Rank')] = board.iloc[i-1, board.columns.get_loc('Rank')]
     return board
 
 
@@ -130,22 +161,48 @@ def CheckRatings(p1_name, p2_name):
     gl = DownloadDF('game_log.csv')
     gl = PopulateRatings(gl)
     lb = GameLogToLeaderboard(gl)
+
+    # hypothetical game log for p1 win
+    gl_p1 = gl.reindex(gl.index.tolist() + list(range(gl.shape[0], gl.shape[0]+1)))
+    gl_p1.iloc[-1,1] = p1_name
+    gl_p1.iloc[-1,2] = 21
+    gl_p1.iloc[-1,3] = p2_name
+    gl_p1.iloc[-1,4] = 0
+
+    # hypothetical game log for p2 win
+    gl_p2 = gl.reindex(gl.index.tolist() + list(range(gl.shape[0], gl.shape[0]+1)))
+    gl_p2.iloc[-1,1] = p1_name
+    gl_p2.iloc[-1,2] = 0
+    gl_p2.iloc[-1,3] = p2_name
+    gl_p2.iloc[-1,4] = 21
+
+    gl_p1 = PopulateRatings(gl_p1)
+    gl_p2 = PopulateRatings(gl_p2)
+
+    lb_p1 = GameLogToLeaderboard(gl_p1)
+    lb_p2 = GameLogToLeaderboard(gl_p2)
     
-    #calculate ELO probability of each player winning
-    p1_rating = lb.loc[lb['Player'] == p1_name, 'Rating'].values[0]
-    p2_rating = lb.loc[lb['Player'] == p2_name, 'Rating'].values[0]
+    # change in composite for p1 winning
+    p1_win = int(lb_p1.loc[lb_p1['Player'] == p1_name, 'Composite Rating'].values \
+            - lb.loc[lb_p1['Player'] == p1_name, 'Composite Rating'].values)
+    p2_lose= int(lb_p1.loc[lb_p1['Player'] == p2_name, 'Composite Rating'].values \
+            - lb.loc[lb_p1['Player'] == p2_name, 'Composite Rating'].values)
 
-    prob_p1_win = 1/(1+10**((p2_rating-p1_rating)/400))
-    prob_p2_win = 1/(1+10**((p1_rating-p2_rating)/400))
+    # change in composite for p2 winning
+    p2_win = int(lb_p2.loc[lb_p2['Player'] == p2_name, 'Composite Rating'].values \
+            - lb.loc[lb_p2['Player'] == p2_name, 'Composite Rating'].values)
+    p1_lose= int(lb_p2.loc[lb_p2['Player'] == p1_name, 'Composite Rating'].values \
+            - lb.loc[lb_p2['Player'] == p1_name, 'Composite Rating'].values)
 
-    #calculate rating change
-    p1_win = round(32*(1-prob_p1_win))
-    p2_lose = round(32*(0-prob_p2_win))
-    p2_win = round(32*(1-prob_p2_win))
-    p1_lose = round(32*(0-prob_p1_win))
+    # change in rank for p1 winning
+    p1_win_rank = int(lb_p1.loc[lb_p1['Player'] == p1_name, 'Rank'].values)
+    p2_lose_rank= int(lb_p1.loc[lb_p1['Player'] == p2_name, 'Rank'].values) 
 
-    return p1_win, p1_lose, p2_win, p2_lose
+    # change in rank for p2 winning
+    p2_win_rank = int(lb_p2.loc[lb_p2['Player'] == p2_name, 'Rank'].values)
+    p1_lose_rank= int(lb_p2.loc[lb_p2['Player'] == p1_name, 'Rank'].values)
 
+    return p1_win, p1_lose, p2_win, p2_lose, p1_win_rank, p1_lose_rank, p2_win_rank, p2_lose_rank
 
 # ---------
 #   Flask
@@ -206,6 +263,10 @@ def calculator():
     p1_lose = 0
     p2_win = 0
     p2_lose = 0
+    p1_win_rank = 0
+    p1_lose_rank = 0
+    p2_win_rank = 0
+    p2_lose_rank = 0
     p1_name = ''
     p2_name = ''
 
@@ -213,11 +274,12 @@ def calculator():
         p1_name = request.form.get("p1_name")
         p2_name = request.form.get("p2_name")
 
-        p1_win, p1_lose, p2_win, p2_lose = CheckRatings(p1_name, p2_name)
+        p1_win, p1_lose, p2_win, p2_lose, p1_win_rank, p1_lose_rank, p2_win_rank, p2_lose_rank = CheckRatings(p1_name, p2_name)
         
         return render_template("calculator.html", players = player_list, \
             p1_win = p1_win, p1_lose = p1_lose, p2_win = p2_win, p2_lose= p2_lose,\
-            p1_name = p1_name, p2_name = p2_name)
+            p1_name = p1_name, p2_name = p2_name, p1_win_rank = p1_win_rank, \
+            p1_lose_rank = p1_lose_rank, p2_win_rank = p2_win_rank, p2_lose_rank = p2_lose_rank,)
     else:
         return render_template("calculator.html", players = player_list)
 
