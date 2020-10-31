@@ -73,10 +73,11 @@ def PopulateRatings(df):
 
 
 def GameLogToLeaderboard(gl):
-    board = pd.DataFrame(columns = ['Rank','Composite Rating','Player','ELO Rating', 'Avg Opponent', 'Wins', 'Losses'])
+    board = pd.DataFrame(columns = ['Rank','Player','SoS Adj ELO','ELO Rating', 'Avg Opp ELO', 'Wins', 'Losses'])
 
     # pull data from game_log for every player [i]
     for i in range(5, gl.shape[1]):
+        # Compute wins and losses
         player_name = gl.columns.values[i]
         wins = 0
         for j in range(1, gl.shape[0]):
@@ -93,10 +94,9 @@ def GameLogToLeaderboard(gl):
         board.iloc[i-5, board.columns.get_loc('Wins')] = wins
         board.iloc[i-5, board.columns.get_loc('Losses')] = losses
 
-    # Calculate Strength of Schedule
+        # Calculate Strength of Schedule
         ul = gl.loc[(gl['P1_Name'] == player_name) | (gl['P2_Name'] == player_name)]
         ul = ul.iloc[:,:5]
-        #ul = ul.astype({'P1_Score':int, 'P2_Score':int})
         opponent_sum = 0 
         for j in range(0, ul.shape[0]):
             if ul.iloc[j,1] == player_name:
@@ -105,23 +105,23 @@ def GameLogToLeaderboard(gl):
                 opponent_sum = opponent_sum + gl.iloc[-1, gl.columns.get_loc(ul.iloc[j,1])]
         # handle DIV/0 for newly registered players
         if ul.shape[0] > 0:
-            board.iloc[i-5, np.where(board.columns.values == 'Avg Opponent')[0][0]] \
+            board.iloc[i-5, np.where(board.columns.values == 'Avg Opp ELO')[0][0]] \
                 = round(opponent_sum / ul.shape[0])
         else:
-            board.iloc[i-5, np.where(board.columns.values == 'Avg Opponent')[0][0]] = 0
+            board.iloc[i-5, np.where(board.columns.values == 'Avg Opp ELO')[0][0]] = 0
 
     # Calculate composite rating [Rating + (Avg Opponent - 1500)]
-        board.iloc[i-5, board.columns.get_loc('Composite Rating')] \
+        board.iloc[i-5, board.columns.get_loc('SoS Adj ELO')] \
             = int(board.iloc[i-5, board.columns.get_loc('ELO Rating')] \
-            + 0.5*(board.iloc[i-5, board.columns.get_loc('Avg Opponent')] - 1500))
+            + 0.5*(board.iloc[i-5, board.columns.get_loc('Avg Opp ELO')] - 1500))
 
-    board = board.sort_values(by=['Composite Rating'], ascending = False)
+    board = board.sort_values(by=['SoS Adj ELO'], ascending = False)
 
     # Add Rank Labels
     board.iloc[0, board.columns.get_loc('Rank')] = 1
     for i in range(1,board.shape[0]):
-        if board.iloc[i, board.columns.get_loc('Composite Rating')] < board.iloc[i-1, board.columns.get_loc('Composite Rating')]:
-            board.iloc[i, board.columns.get_loc('Rank')] = board.iloc[i-1, board.columns.get_loc('Rank')] + 1
+        if board.iloc[i, board.columns.get_loc('SoS Adj ELO')] < board.iloc[i-1, board.columns.get_loc('SoS Adj ELO')]:
+            board.iloc[i, board.columns.get_loc('Rank')] = i + 1
         else:
             board.iloc[i, board.columns.get_loc('Rank')] = board.iloc[i-1, board.columns.get_loc('Rank')]
     return board
@@ -183,16 +183,16 @@ def CheckRatings(p1_name, p2_name):
     lb_p2 = GameLogToLeaderboard(gl_p2)
     
     # change in composite for p1 winning
-    p1_win = int(lb_p1.loc[lb_p1['Player'] == p1_name, 'Composite Rating'].values \
-            - lb.loc[lb_p1['Player'] == p1_name, 'Composite Rating'].values)
-    p2_lose= int(lb_p1.loc[lb_p1['Player'] == p2_name, 'Composite Rating'].values \
-            - lb.loc[lb_p1['Player'] == p2_name, 'Composite Rating'].values)
+    p1_win = int(lb_p1.loc[lb_p1['Player'] == p1_name, 'SoS Adj ELO'].values \
+            - lb.loc[lb_p1['Player'] == p1_name, 'SoS Adj ELO'].values)
+    p2_lose= int(lb_p1.loc[lb_p1['Player'] == p2_name, 'SoS Adj ELO'].values \
+            - lb.loc[lb_p1['Player'] == p2_name, 'SoS Adj ELO'].values)
 
     # change in composite for p2 winning
-    p2_win = int(lb_p2.loc[lb_p2['Player'] == p2_name, 'Composite Rating'].values \
-            - lb.loc[lb_p2['Player'] == p2_name, 'Composite Rating'].values)
-    p1_lose= int(lb_p2.loc[lb_p2['Player'] == p1_name, 'Composite Rating'].values \
-            - lb.loc[lb_p2['Player'] == p1_name, 'Composite Rating'].values)
+    p2_win = int(lb_p2.loc[lb_p2['Player'] == p2_name, 'SoS Adj ELO'].values \
+            - lb.loc[lb_p2['Player'] == p2_name, 'SoS Adj ELO'].values)
+    p1_lose= int(lb_p2.loc[lb_p2['Player'] == p1_name, 'SoS Adj ELO'].values \
+            - lb.loc[lb_p2['Player'] == p1_name, 'SoS Adj ELO'].values)
 
     # change in rank for p1 winning
     p1_win_rank = int(lb_p1.loc[lb_p1['Player'] == p1_name, 'Rank'].values)
