@@ -73,7 +73,7 @@ def PopulateRatings(df):
 
 
 def GameLogToLeaderboard(gl):
-    board = pd.DataFrame(columns = ['Rank','Player','SoS Adj ELO','ELO Rating', 'Avg Opp ELO', 'Wins', 'Losses'])
+    board = pd.DataFrame(columns = ['Rank','Player','Composite Z-Score','ELO Rating', 'Z(ELO Rating)', 'Avg Opp ELO','Z(Avg Opp ELO)','Win %','Z(Win %)' ,'Wins', 'Losses'])
 
     # pull data from game_log for every player [i]
     for i in range(5, gl.shape[1]):
@@ -94,7 +94,14 @@ def GameLogToLeaderboard(gl):
         for j in range(1, gl.shape[0]):
             if gl.iloc[j,i] < gl.iloc[j-1,i]:
                 losses += 1
-        board.iloc[i-5, board.columns.get_loc('Losses')] = losses        
+        board.iloc[i-5, board.columns.get_loc('Losses')] = losses
+
+        # Win percentage
+        if (wins + losses) > 0:
+            win_percent = wins / (wins + losses)
+        else:
+            win_percent = 0
+        board.iloc[i-5, board.columns.get_loc('Win %')] = win_percent
 
         # Calculate average opponent ELO rating
         ul = gl.loc[(gl['P1_Name'] == player_name) | (gl['P2_Name'] == player_name)]
@@ -110,22 +117,44 @@ def GameLogToLeaderboard(gl):
             board.iloc[i-5, np.where(board.columns.values == 'Avg Opp ELO')[0][0]] \
                 = round(opponent_sum / ul.shape[0])
         else:
-            board.iloc[i-5, np.where(board.columns.values == 'Avg Opp ELO')[0][0]] = 0
+            board.iloc[i-5, np.where(board.columns.values == 'Avg Opp ELO')[0][0]] = 1000
+
+    # Z-Score of ELO Rating
+    for i in range(0, board.shape[0]):
+        board.iloc[i, board.columns.get_loc('Z(ELO Rating)')] = \
+        (board.iloc[i, board.columns.get_loc('ELO Rating')] - board["ELO Rating"].mean()) / \
+        board["ELO Rating"].std()
+
+    # Z-Score of Average Opponent ELO Rating
+    for i in range(0, board.shape[0]):
+        board.iloc[i, board.columns.get_loc('Z(Avg Opp ELO)')] = \
+        (board.iloc[i, board.columns.get_loc('Avg Opp ELO')] - board['Avg Opp ELO'].mean()) / \
+        board['Avg Opp ELO'].std()
+
+    # Z-Score of win percentage
+    for i in range(0, board.shape[0]):
+        board.iloc[i, board.columns.get_loc('Z(Win %)')] = \
+        (board.iloc[i, board.columns.get_loc('Win %')] - board["Win %"].mean()) / \
+        board["Win %"].std()
 
     # Calculate composite rating [Rating + (Avg Opponent - 1500)]
-        board.iloc[i-5, board.columns.get_loc('SoS Adj ELO')] \
-            = int(board.iloc[i-5, board.columns.get_loc('ELO Rating')] \
-            + 0.5*(board.iloc[i-5, board.columns.get_loc('Avg Opp ELO')] - 1500))
-
-    board = board.sort_values(by=['SoS Adj ELO'], ascending = False)
+    for i in range(0, board.shape[0]):
+        board.iloc[i, board.columns.get_loc('Composite Z-Score')] \
+            = board.iloc[i, board.columns.get_loc('Z(ELO Rating)')] \
+            + board.iloc[i, board.columns.get_loc('Z(Avg Opp ELO)')] \
+            + board.iloc[i, board.columns.get_loc('Z(Win %)')] 
+    board = board.sort_values(by=['Composite Z-Score'], ascending = False)
 
     # Add Rank Labels
     board.iloc[0, board.columns.get_loc('Rank')] = 1
     for i in range(1,board.shape[0]):
-        if board.iloc[i, board.columns.get_loc('SoS Adj ELO')] < board.iloc[i-1, board.columns.get_loc('SoS Adj ELO')]:
+        if board.iloc[i, board.columns.get_loc('Composite Z-Score')] < board.iloc[i-1, board.columns.get_loc('Composite Z-Score')]:
             board.iloc[i, board.columns.get_loc('Rank')] = i + 1
         else:
             board.iloc[i, board.columns.get_loc('Rank')] = board.iloc[i-1, board.columns.get_loc('Rank')]
+
+    board = board.astype({'Composite Z-Score':float, 'Z(ELO Rating)':float, 'Z(Avg Opp ELO)':float, 'Win %':float,'Z(Win %)':float})
+    board = board.round({'Composite Z-Score':2, 'Z(ELO Rating)':2, 'Z(Avg Opp ELO)':2,'Win %':2 ,'Z(Win %)':2})
     return board
 
 
@@ -185,16 +214,16 @@ def CheckRatings(p1_name, p2_name):
     lb_p2 = GameLogToLeaderboard(gl_p2)
     
     # change in composite for p1 winning
-    p1_win = int(lb_p1.loc[lb_p1['Player'] == p1_name, 'SoS Adj ELO'].values \
-            - lb.loc[lb_p1['Player'] == p1_name, 'SoS Adj ELO'].values)
-    p2_lose= int(lb_p1.loc[lb_p1['Player'] == p2_name, 'SoS Adj ELO'].values \
-            - lb.loc[lb_p1['Player'] == p2_name, 'SoS Adj ELO'].values)
+    p1_win = round(float(lb_p1.loc[lb_p1['Player'] == p1_name, 'Composite Z-Score'].values \
+            - lb.loc[lb_p1['Player'] == p1_name, 'Composite Z-Score'].values),2)
+    p2_lose= round(float(lb_p1.loc[lb_p1['Player'] == p2_name, 'Composite Z-Score'].values \
+            - lb.loc[lb_p1['Player'] == p2_name, 'Composite Z-Score'].values),2)
 
     # change in composite for p2 winning
-    p2_win = int(lb_p2.loc[lb_p2['Player'] == p2_name, 'SoS Adj ELO'].values \
-            - lb.loc[lb_p2['Player'] == p2_name, 'SoS Adj ELO'].values)
-    p1_lose= int(lb_p2.loc[lb_p2['Player'] == p1_name, 'SoS Adj ELO'].values \
-            - lb.loc[lb_p2['Player'] == p1_name, 'SoS Adj ELO'].values)
+    p2_win = round(float(lb_p2.loc[lb_p2['Player'] == p2_name, 'Composite Z-Score'].values \
+            - lb.loc[lb_p2['Player'] == p2_name, 'Composite Z-Score'].values),2)
+    p1_lose= round(float(lb_p2.loc[lb_p2['Player'] == p1_name, 'Composite Z-Score'].values \
+            - lb.loc[lb_p2['Player'] == p1_name, 'Composite Z-Score'].values),2)
 
     # change in rank for p1 winning
     p1_win_rank = int(lb_p1.loc[lb_p1['Player'] == p1_name, 'Rank'].values)
