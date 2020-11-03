@@ -2,6 +2,7 @@ from flask import Flask, redirect, url_for, render_template, request
 import numpy as np
 import pandas as pd
 import datetime
+import pytz
 import boto3
 from io import StringIO
 import sys
@@ -177,8 +178,14 @@ def SubmitScore(p1_name, p1_score, p2_name, p2_score):
     # empty new row
     gl = gl.reindex(gl.index.tolist() + list(range(gl.shape[0], gl.shape[0]+1)))
 
-    ts = str(datetime.datetime.now())
-    ts_format = ts[:10] + "_" + str(int(ts[11:13])-5) + ":" + ts[14:16]
+    # UTC -> CST time conversion
+    ts = datetime.datetime.now()
+    old_timezone = pytz.timezone("UTC")
+    new_timezone = pytz.timezone("US/Central")
+    local_ts = old_timezone.localize(ts)
+    nts = str(local_ts.astimezone(new_timezone))
+
+    ts_format = nts[:10] + "_" + nts[11:13] + ":" + nts[14:16]
 
     gl.iloc[-1,0] = ts_format
     gl.iloc[-1,1] = p1_name
