@@ -117,7 +117,7 @@ def GameLogToLeaderboard(gl):
             board.iloc[i-5, np.where(board.columns.values == 'Avg Opp ELO')[0][0]] \
                 = round(opponent_sum / ul.shape[0])
         else:
-            board.iloc[i-5, np.where(board.columns.values == 'Avg Opp ELO')[0][0]] = 1000
+            board.iloc[i-5, np.where(board.columns.values == 'Avg Opp ELO')[0][0]] = 0
 
     # Z-Score of ELO Rating
     for i in range(0, board.shape[0]):
@@ -126,10 +126,11 @@ def GameLogToLeaderboard(gl):
         board["ELO Rating"].std()
 
     # Z-Score of Average Opponent ELO Rating
+    temp = board["Avg Opp ELO"]
+    temp = temp.replace(0, np.NaN)
     for i in range(0, board.shape[0]):
         board.iloc[i, board.columns.get_loc('Z(Avg Opp ELO)')] = \
-        (board.iloc[i, board.columns.get_loc('Avg Opp ELO')] - board['Avg Opp ELO'].mean()) / \
-        board['Avg Opp ELO'].std()
+        (board.iloc[i, board.columns.get_loc('Avg Opp ELO')] - temp.mean()) / temp.std()
 
     # Z-Score of win percentage
     for i in range(0, board.shape[0]):
@@ -250,7 +251,7 @@ def home():
     lb = GameLogToLeaderboard(gl)
 
     # Pull most recent 10 games to display on homepage
-    gl_recent = gl.iloc[-11:-1, :5]
+    gl_recent = gl.iloc[-10:, :5]
     gl_recent = gl_recent.astype({'P1_Score':int, 'P2_Score':int})
     gl_recent = gl_recent.sort_values(by=['Timestamp'], ascending = False)
 
