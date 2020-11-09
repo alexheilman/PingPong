@@ -172,7 +172,7 @@ def AddPlayer(name):
     UploadDF(gl, 'game_log.csv')
 
 
-def SubmitScore(p1_name, p1_score, p2_name, p2_score):
+def AddGame(p1_name, p1_score, p2_name, p2_score):
     gl = DownloadDF('game_log.csv')
 
     # empty new row
@@ -193,30 +193,37 @@ def SubmitScore(p1_name, p1_score, p2_name, p2_score):
     gl.iloc[-1,3] = p2_name
     gl.iloc[-1,4] = p2_score
 
-    UploadDF(gl, 'game_log.csv')
+    # initialize everyone else's ranking from their previous ranking
+    for j in range(5, gl.shape[1]):
+        gl.iloc[-1,j] = gl.iloc[-2,j]
+
+    # calculate ELO probability of each player winning
+    p1_rating = gl.iloc[-2, gl.columns.get_loc(p1_name)]
+    p2_rating = gl.iloc[-2, gl.columns.get_loc(p2_name)]
+
+    prob_p1_win = 1/(1+10**((p2_rating-p1_rating)/400))
+    prob_p2_win = 1/(1+10**((p1_rating-p2_rating)/400))
+
+    # update player ratings
+    if p1_score > p2_score:
+        gl.iloc[-1, gl.columns.get_loc(p1_name)] = p1_rating + round(32*(1-prob_p1_win))
+        gl.iloc[-1, gl.columns.get_loc(p2_name)] = p2_rating + round(32*(0-prob_p2_win))
+    elif p1_score == p2_score:
+        pass
+    else:
+        gl.iloc[-1, gl.columns.get_loc(p1_name)] = p1_rating + round(32*(0-prob_p1_win))
+        gl.iloc[-1, gl.columns.get_loc(p2_name)] = p2_rating + round(32*(1-prob_p2_win))
+
+    return gl
 
 
 def CheckRatings(p1_name, p2_name):
     gl = DownloadDF('game_log.csv')
-    gl = PopulateRatings(gl)
+    #gl = PopulateRatings(gl)
     lb = GameLogToLeaderboard(gl)
 
-    # hypothetical game log for p1 win
-    gl_p1 = gl.reindex(gl.index.tolist() + list(range(gl.shape[0], gl.shape[0]+1)))
-    gl_p1.iloc[-1,1] = p1_name
-    gl_p1.iloc[-1,2] = 21
-    gl_p1.iloc[-1,3] = p2_name
-    gl_p1.iloc[-1,4] = 0
-
-    # hypothetical game log for p2 win
-    gl_p2 = gl.reindex(gl.index.tolist() + list(range(gl.shape[0], gl.shape[0]+1)))
-    gl_p2.iloc[-1,1] = p1_name
-    gl_p2.iloc[-1,2] = 0
-    gl_p2.iloc[-1,3] = p2_name
-    gl_p2.iloc[-1,4] = 21
-
-    gl_p1 = PopulateRatings(gl_p1)
-    gl_p2 = PopulateRatings(gl_p2)
+    gl_p1 = AddGame(p1_name, 21, p2_name, 0)
+    gl_p2 = AddGame(p1_name, 0, p2_name, 21)
 
     lb_p1 = GameLogToLeaderboard(gl_p1)
     lb_p2 = GameLogToLeaderboard(gl_p2)
@@ -254,7 +261,7 @@ player_list = []
 @app.route("/", methods=["POST", "GET"])
 def home():
     gl = DownloadDF('game_log.csv')
-    gl = PopulateRatings(gl)
+    #gl = PopulateRatings(gl)
     lb = GameLogToLeaderboard(gl)
 
     # Pull most recent 10 games to display on homepage
@@ -296,7 +303,8 @@ def submit():
 
         # don't update leaderboard if score is a player vs themself
         if (p1_name != p2_name):
-            SubmitScore(p1_name, p1_score, p2_name, p2_score)
+            gl = AddGame(p1_name, p1_score, p2_name, p2_score)
+            UploadDF(gl, 'game_log.csv')
         return redirect(url_for("home"))
     else:
         return render_template("submit_score.html", players = player_list)
@@ -338,6 +346,14 @@ def user(name):
 
     return render_template("player_page.html", player = name, \
                             tables=[ul.to_html(index=False)])
+
+@app.route("/refresh", methods=["POST", "GET"])
+def refresh():
+    gl = DownloadDF('game_log.csv')
+    gl = PopulateRatings(gl)
+    UploadDF(gl, 'game_log.csv')
+    return redirect(url_for("home"))
+
 
 if __name__ == "__main__":
     app.run(debug=True)
