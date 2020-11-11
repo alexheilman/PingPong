@@ -1,12 +1,17 @@
 {% extends "base.html" %}
 {% block title %}
+<br>
 	{{player}}
 {% endblock %}
 
 {% block content %}
-
-	{% for table in tables %}
-	    {{ table|safe }}
-	{% endfor %}
+<br>
+<table>
+    <tr>
+    	{% for table in tables %}
+			<td>{{ table|safe }}</td>
+		{% endfor %}
+	</tr>
+</table>
 
 {% endblock %}

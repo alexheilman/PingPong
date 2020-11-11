@@ -1,24 +1,35 @@
 {% extends "base.html" %}
+
 {% block title %}
-	<u>Leaderboard</u>
+<br>
+	Leaderboard
 {% endblock %}
+
 
 {% block content %}
 
-	{% for table in tables %}
-	    {{ table|safe }}
-	{% endfor %}
+<p>Composite Z-Score = Z(ELO Rating) + Z(Avg Opp ELO) + Z(Win %)</p>
+<table>
+    <tr>
+    	{% for result in results %}
+			<td>{{ result|safe }}</td>
+		{% endfor %}
+	</tr>
+</table>
 
 <br>
-<p> Recent Games </p>
+<h3> Recent Games </h3>
+<table>
+    <tr>
 	{% for recent in recents %}
-	    {{ recent|safe }}
+	    <td>{{ recent|safe }}</td>
 	{% endfor %}
-
+	</tr>
+</table>
 
 <form action="" method="post">
 	<br>
-	<p>View player game history</p>
+	<h3>Player Game History</h3>
 	<p>	
 		<select name= player  value= "test" method="GET" action="/">
     	{% for player in players %}
@@ -31,6 +42,5 @@
 		<input type = "submit" value = "submit"/>
 	</p>
 </form>
-
 
 {% endblock %}

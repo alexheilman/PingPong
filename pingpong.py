@@ -220,7 +220,8 @@ def AddGame(p1_name, p1_score, p2_name, p2_score):
 def CheckRatings(p1_name, p2_name):
     gl = DownloadDF('game_log.csv')
     #gl = PopulateRatings(gl)
-    lb = GameLogToLeaderboard(gl)
+    #lb = GameLogToLeaderboard(gl)
+    lb = DownloadDF('leaderboard.csv')
 
     gl_p1 = AddGame(p1_name, 21, p2_name, 0)
     gl_p2 = AddGame(p1_name, 0, p2_name, 21)
@@ -261,8 +262,8 @@ player_list = []
 @app.route("/", methods=["POST", "GET"])
 def home():
     gl = DownloadDF('game_log.csv')
-    #gl = PopulateRatings(gl)
-    lb = GameLogToLeaderboard(gl)
+    #lb = GameLogToLeaderboard(gl)
+    lb = DownloadDF('leaderboard.csv')
 
     # Pull most recent 10 games to display on homepage
     gl_recent = gl.iloc[-10:, :5]
@@ -275,12 +276,14 @@ def home():
     player_list = lb.sort_values(by=['Player'])
     player_list = player_list['Player']
 
+
     if request.method == "POST":
         player = request.form.get("player")
         return redirect(url_for("user", name=player))
     else:
-        return render_template("index.html", players = player_list,\
-                tables=[lb.to_html(index=False)], recents=[gl_recent.to_html(index=False)])
+        return render_template("home.html", players = player_list,\
+                results=[lb.to_html(index=False, justify="center", classes = "table table-bordered table-striped")], \
+                recents=[gl_recent.to_html(index=False, justify="center",classes = "table table-bordered table-striped")])
 
 
 @app.route("/register", methods=["POST", "GET"])
@@ -288,7 +291,7 @@ def register():
     if request.method == "POST":
         new_player = request.form.get("new_player")
         AddPlayer(new_player)
-        return redirect(url_for("home"))
+        return redirect(url_for("refresh"))
     else:
         return render_template("register.html")
 
@@ -305,7 +308,7 @@ def submit():
         if (p1_name != p2_name):
             gl = AddGame(p1_name, p1_score, p2_name, p2_score)
             UploadDF(gl, 'game_log.csv')
-        return redirect(url_for("home"))
+        return redirect(url_for("refresh"))
     else:
         return render_template("submit_score.html", players = player_list)
 
@@ -345,13 +348,18 @@ def user(name):
     ul = ul.astype({'P1_Score':int, 'P2_Score':int})
 
     return render_template("player_page.html", player = name, \
-                            tables=[ul.to_html(index=False)])
+                            tables=[ul.to_html(index=False, \
+                            justify="center", classes = "table table-bordered table-striped")])
 
 @app.route("/refresh", methods=["POST", "GET"])
 def refresh():
     gl = DownloadDF('game_log.csv')
     gl = PopulateRatings(gl)
     UploadDF(gl, 'game_log.csv')
+
+    lb = GameLogToLeaderboard(gl)
+    UploadDF(lb, 'leaderboard.csv')
+
     return redirect(url_for("home"))
 
 
