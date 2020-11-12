@@ -38,7 +38,7 @@ def UploadDF(df, filename):
 # -------------
 
 # Ratings populated from start to finish
-# Needed each time in case previous games need to be removed
+# Needed for refresh page in case previous games need to be removed
 # because future ratings depend on previous ratings
 def PopulateRatings(df): 
     for i in range(1, df.shape[0]):
@@ -231,15 +231,15 @@ def CheckRatings(p1_name, p2_name):
     
     # change in composite for p1 winning
     p1_win = round(float(lb_p1.loc[lb_p1['Player'] == p1_name, 'Composite Z-Score'].values \
-            - lb.loc[lb_p1['Player'] == p1_name, 'Composite Z-Score'].values),2)
+            - lb.loc[lb['Player'] == p1_name, 'Composite Z-Score'].values),2)
     p2_lose= round(float(lb_p1.loc[lb_p1['Player'] == p2_name, 'Composite Z-Score'].values \
-            - lb.loc[lb_p1['Player'] == p2_name, 'Composite Z-Score'].values),2)
+            - lb.loc[lb['Player'] == p2_name, 'Composite Z-Score'].values),2)
 
     # change in composite for p2 winning
     p2_win = round(float(lb_p2.loc[lb_p2['Player'] == p2_name, 'Composite Z-Score'].values \
-            - lb.loc[lb_p2['Player'] == p2_name, 'Composite Z-Score'].values),2)
+            - lb.loc[lb['Player'] == p2_name, 'Composite Z-Score'].values),2)
     p1_lose= round(float(lb_p2.loc[lb_p2['Player'] == p1_name, 'Composite Z-Score'].values \
-            - lb.loc[lb_p2['Player'] == p1_name, 'Composite Z-Score'].values),2)
+            - lb.loc[lb['Player'] == p1_name, 'Composite Z-Score'].values),2)
 
     # change in rank for p1 winning
     p1_win_rank = int(lb_p1.loc[lb_p1['Player'] == p1_name, 'Rank'].values)
