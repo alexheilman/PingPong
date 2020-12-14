@@ -41,6 +41,17 @@ def index():
 
 	return 'Flask' 
 
+@app.route('/test')
+def test():
+	cur = mysql.connection.cursor()
+	resultValue = cur.execute("	SELECT * \
+								FROM game_log \
+								WHERE p1_name = 'dude' ")
+
+	if resultValue > 0:
+		retrieve = cur.fetchall()
+		return render_template('test.html', DATA = retrieve)
+
 if __name__ == '__main__':
 	app.run(debug=True)
 
