@@ -262,8 +262,10 @@ player_list = []
 @app.route("/", methods=["POST", "GET"])
 def home():
     gl = DownloadDF('game_log.csv')
-    #lb = GameLogToLeaderboard(gl)
     lb = DownloadDF('leaderboard.csv')
+
+    # hide wins and loss quantity
+    lb = lb.iloc[:, :9]
 
     # Pull most recent 10 games to display on homepage
     gl_recent = gl.iloc[-10:, :5]
@@ -308,7 +310,11 @@ def submit():
         if (p1_name != p2_name):
             gl = AddGame(p1_name, p1_score, p2_name, p2_score)
             UploadDF(gl, 'game_log.csv')
-        return redirect(url_for("refresh"))
+
+            lb = GameLogToLeaderboard(gl)
+            UploadDF(lb, 'leaderboard.csv')
+
+        return redirect(url_for("home"))
     else:
         return render_template("submit_score.html", players = player_list)
 
