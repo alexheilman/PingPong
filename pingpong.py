@@ -83,18 +83,17 @@ def GameLogToLeaderboard(gl):
         board.iloc[i-5, board.columns.get_loc('Player')] = player_name
         board.iloc[i-5, board.columns.get_loc('ELO Rating')] = int(gl.iloc[-1,i])
 
-        # Compute wins 
-        wins = 0
-        for j in range(1, gl.shape[0]):
-            if gl.iloc[j,i] > gl.iloc[j-1,i]:
-                wins += 1
-        board.iloc[i-5, board.columns.get_loc('Wins')] = wins
+        ul = gl.loc[(gl['P1_Name'] == player_name) | (gl['P2_Name'] == player_name)]
 
-        # Compute losses
+        # Compute wins & losses 
+        wins = 0
         losses = 0
-        for j in range(1, gl.shape[0]):
-            if gl.iloc[j,i] < gl.iloc[j-1,i]:
+        for j in range(1, ul.shape[0]):
+            if ul.iloc[j,i] > ul.iloc[j-1,i]:
+                wins += 1
+            elif ul.iloc[j,i] < ul.iloc[j-1,i]:
                 losses += 1
+        board.iloc[i-5, board.columns.get_loc('Wins')] = wins
         board.iloc[i-5, board.columns.get_loc('Losses')] = losses
 
         # Win percentage
@@ -105,13 +104,12 @@ def GameLogToLeaderboard(gl):
         board.iloc[i-5, board.columns.get_loc('Win %')] = win_percent
 
         # Calculate average opponent ELO rating
-        ul = gl.loc[(gl['P1_Name'] == player_name) | (gl['P2_Name'] == player_name)]
         ul = ul.iloc[:,:5]
         opponent_sum = 0 
         for j in range(0, ul.shape[0]):
             if ul.iloc[j,1] == player_name:
                 opponent_sum = opponent_sum + gl.iloc[-1, gl.columns.get_loc(ul.iloc[j,3])]
-            if ul.iloc[j,3] == player_name:
+            elif ul.iloc[j,3] == player_name:
                 opponent_sum = opponent_sum + gl.iloc[-1, gl.columns.get_loc(ul.iloc[j,1])]
         # handle DIV/0 for newly registered players
         if ul.shape[0] > 0:
@@ -121,30 +119,19 @@ def GameLogToLeaderboard(gl):
             board.iloc[i-5, np.where(board.columns.values == 'Avg Opp ELO')[0][0]] = 0
 
     # Z-Score of ELO Rating
-    for i in range(0, board.shape[0]):
-        board.iloc[i, board.columns.get_loc('Z(ELO Rating)')] = \
-        (board.iloc[i, board.columns.get_loc('ELO Rating')] - board["ELO Rating"].mean()) / \
-        board["ELO Rating"].std()
+    board['Z(ELO Rating)'] = (board['ELO Rating'] - board["ELO Rating"].mean()) / board["ELO Rating"].std()
 
     # Z-Score of Average Opponent ELO Rating
     temp = board["Avg Opp ELO"]
     temp = temp.replace(0, np.NaN)
-    for i in range(0, board.shape[0]):
-        board.iloc[i, board.columns.get_loc('Z(Avg Opp ELO)')] = \
-        (board.iloc[i, board.columns.get_loc('Avg Opp ELO')] - temp.mean()) / temp.std()
+    board['Z(Avg Opp ELO)'] = (board['Avg Opp ELO'] - temp.mean()) / temp.std()
 
     # Z-Score of win percentage
-    for i in range(0, board.shape[0]):
-        board.iloc[i, board.columns.get_loc('Z(Win %)')] = \
-        (board.iloc[i, board.columns.get_loc('Win %')] - board["Win %"].mean()) / \
-        board["Win %"].std()
+    board['Z(Win %)'] = (board['Win %'] - board["Win %"].mean()) / board["Win %"].std()
+
 
     # Calculate composite rating [Rating + (Avg Opponent - 1500)]
-    for i in range(0, board.shape[0]):
-        board.iloc[i, board.columns.get_loc('Composite Z-Score')] \
-            = board.iloc[i, board.columns.get_loc('Z(ELO Rating)')] \
-            + board.iloc[i, board.columns.get_loc('Z(Avg Opp ELO)')] \
-            + board.iloc[i, board.columns.get_loc('Z(Win %)')] 
+    board['Composite Z-Score'] = board['Z(ELO Rating)'] + board['Z(Avg Opp ELO)'] + board['Z(Win %)']
     board = board.sort_values(by=['Composite Z-Score'], ascending = False)
 
     # Add Rank Labels
