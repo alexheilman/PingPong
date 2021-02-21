@@ -131,8 +131,11 @@ def GameLogToLeaderboard(gl):
 
 
     # Calculate composite rating [Rating + (Avg Opponent - 1500)]
-    board['Composite Z-Score'] = board['Z(ELO Rating)'] + board['Z(Avg Opp ELO)'] + board['Z(Win %)']
+    board['Composite Z-Score'] = (board['Z(ELO Rating)'] + board['Z(Avg Opp ELO)'] + board['Z(Win %)']) / 3
     board = board.sort_values(by=['Composite Z-Score'], ascending = False)
+
+    # remove player from leaderboard
+    board = board[board.Player != 'Seth Brathovd']
 
     # Add Rank Labels
     board.iloc[0, board.columns.get_loc('Rank')] = 1
@@ -144,6 +147,7 @@ def GameLogToLeaderboard(gl):
 
     board = board.astype({'Composite Z-Score':float, 'Z(ELO Rating)':float, 'Z(Avg Opp ELO)':float, 'Win %':float,'Z(Win %)':float})
     board = board.round({'Composite Z-Score':2, 'Z(ELO Rating)':2, 'Z(Avg Opp ELO)':2,'Win %':2 ,'Z(Win %)':2})
+
     return board
 
 
@@ -151,12 +155,14 @@ def AddPlayer(name):
     gl = DownloadDF('game_log.csv')
 
     if name not in gl.columns.values[5:]:
-        gl[name] = np.nan
-        gl.iloc[0, gl.shape[1]-1] = 1500
+        gl[name] = 1500
     else:
         pass
 
     UploadDF(gl, 'game_log.csv')
+
+    lb = GameLogToLeaderboard(gl)
+    UploadDF(lb, 'leaderboard.csv')
 
 
 def AddGame(p1_name, p1_score, p2_name, p2_score):
@@ -271,7 +277,7 @@ def home():
         return redirect(url_for("user", name=player))
     else:
         return render_template("home.html", players = player_list,\
-                results=[lb.to_html(index=False, justify="center", classes = "table table-bordered table-striped")], \
+                results=[lb.to_html(index=False, justify="center", classes = "table table-bordered table-striped" )], \
                 recents=[gl_recent.to_html(index=False, justify="center",classes = "table table-bordered table-striped")])
 
 
@@ -280,7 +286,7 @@ def register():
     if request.method == "POST":
         new_player = request.form.get("new_player")
         AddPlayer(new_player)
-        return redirect(url_for("refresh"))
+        return redirect(url_for("home"))
     else:
         return render_template("register.html")
 
@@ -339,6 +345,7 @@ def user(name):
     ul = gl.loc[(gl['P1_Name'] == name) | (gl['P2_Name'] == name)]
     ul = ul.iloc[:,:5]
     ul = ul.astype({'P1_Score':int, 'P2_Score':int})
+    ul = ul[::-1]
 
     return render_template("player_page.html", player = name, \
                             tables=[ul.to_html(index=False, \
