@@ -146,7 +146,7 @@ def GameLogToLeaderboard(gl):
             board.iloc[i, board.columns.get_loc('Rank')] = board.iloc[i-1, board.columns.get_loc('Rank')]
 
     board = board.astype({'Composite Z-Score':float, 'Z(ELO Rating)':float, 'Z(Avg Opp ELO)':float, 'Win %':float,'Z(Win %)':float})
-    board = board.round({'Composite Z-Score':2, 'Z(ELO Rating)':2, 'Z(Avg Opp ELO)':2,'Win %':2 ,'Z(Win %)':2})
+    board = board.round({'Composite Z-Score':3, 'Z(ELO Rating)':2, 'Z(Avg Opp ELO)':2,'Win %':2 ,'Z(Win %)':2})
 
     return board
 
