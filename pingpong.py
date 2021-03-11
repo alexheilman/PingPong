@@ -74,7 +74,7 @@ def PopulateRatings(df):
 
 
 def GameLogToLeaderboard(gl):
-    board = pd.DataFrame(columns = ['Rank','Player','Composite Z-Score','ELO Rating', 'Z(ELO Rating)', 'Avg Opp ELO','Z(Avg Opp ELO)','Win %','Z(Win %)' ,'Wins', 'Losses'])
+    board = pd.DataFrame(columns = ['Rank','Player','Average Z-Score','ELO Rating', 'Z(ELO Rating)', 'Avg Opp ELO','Z(Avg Opp ELO)','Win %','Z(Win %)' ,'Wins', 'Losses'])
 
     # pull data from game_log for every player [i]
     for i in range(5, gl.shape[1]):
@@ -131,8 +131,8 @@ def GameLogToLeaderboard(gl):
 
 
     # Calculate composite rating [Rating + (Avg Opponent - 1500)]
-    board['Composite Z-Score'] = (board['Z(ELO Rating)'] + board['Z(Avg Opp ELO)'] + board['Z(Win %)']) / 3
-    board = board.sort_values(by=['Composite Z-Score'], ascending = False)
+    board['Average Z-Score'] = (board['Z(ELO Rating)'] + board['Z(Avg Opp ELO)'] + board['Z(Win %)']) / 3
+    board = board.sort_values(by=['Average Z-Score'], ascending = False)
 
     # remove player from leaderboard
     board = board[board.Player != 'Seth Brathovd']
@@ -140,13 +140,13 @@ def GameLogToLeaderboard(gl):
     # Add Rank Labels
     board.iloc[0, board.columns.get_loc('Rank')] = 1
     for i in range(1,board.shape[0]):
-        if board.iloc[i, board.columns.get_loc('Composite Z-Score')] < board.iloc[i-1, board.columns.get_loc('Composite Z-Score')]:
+        if board.iloc[i, board.columns.get_loc('Average Z-Score')] < board.iloc[i-1, board.columns.get_loc('Average Z-Score')]:
             board.iloc[i, board.columns.get_loc('Rank')] = i + 1
         else:
             board.iloc[i, board.columns.get_loc('Rank')] = board.iloc[i-1, board.columns.get_loc('Rank')]
 
-    board = board.astype({'Composite Z-Score':float, 'Z(ELO Rating)':float, 'Z(Avg Opp ELO)':float, 'Win %':float,'Z(Win %)':float})
-    board = board.round({'Composite Z-Score':3, 'Z(ELO Rating)':2, 'Z(Avg Opp ELO)':2,'Win %':2 ,'Z(Win %)':2})
+    board = board.astype({'Average Z-Score':float, 'Z(ELO Rating)':float, 'Z(Avg Opp ELO)':float, 'Win %':float,'Z(Win %)':float})
+    board = board.round({'Average Z-Score':3, 'Z(ELO Rating)':2, 'Z(Avg Opp ELO)':2,'Win %':2 ,'Z(Win %)':2})
 
     return board
 
@@ -223,16 +223,16 @@ def CheckRatings(p1_name, p2_name):
     lb_p2 = GameLogToLeaderboard(gl_p2)
     
     # change in composite for p1 winning
-    p1_win = round(float(lb_p1.loc[lb_p1['Player'] == p1_name, 'Composite Z-Score'].values \
-            - lb.loc[lb['Player'] == p1_name, 'Composite Z-Score'].values),2)
-    p2_lose= round(float(lb_p1.loc[lb_p1['Player'] == p2_name, 'Composite Z-Score'].values \
-            - lb.loc[lb['Player'] == p2_name, 'Composite Z-Score'].values),2)
+    p1_win = round(float(lb_p1.loc[lb_p1['Player'] == p1_name, 'Average Z-Score'].values \
+            - lb.loc[lb['Player'] == p1_name, 'Average Z-Score'].values),2)
+    p2_lose= round(float(lb_p1.loc[lb_p1['Player'] == p2_name, 'Average Z-Score'].values \
+            - lb.loc[lb['Player'] == p2_name, 'Average Z-Score'].values),2)
 
     # change in composite for p2 winning
-    p2_win = round(float(lb_p2.loc[lb_p2['Player'] == p2_name, 'Composite Z-Score'].values \
-            - lb.loc[lb['Player'] == p2_name, 'Composite Z-Score'].values),2)
-    p1_lose= round(float(lb_p2.loc[lb_p2['Player'] == p1_name, 'Composite Z-Score'].values \
-            - lb.loc[lb['Player'] == p1_name, 'Composite Z-Score'].values),2)
+    p2_win = round(float(lb_p2.loc[lb_p2['Player'] == p2_name, 'Average Z-Score'].values \
+            - lb.loc[lb['Player'] == p2_name, 'Average Z-Score'].values),2)
+    p1_lose= round(float(lb_p2.loc[lb_p2['Player'] == p1_name, 'Average Z-Score'].values \
+            - lb.loc[lb['Player'] == p1_name, 'Average Z-Score'].values),2)
 
     # change in rank for p1 winning
     p1_win_rank = int(lb_p1.loc[lb_p1['Player'] == p1_name, 'Rank'].values)
