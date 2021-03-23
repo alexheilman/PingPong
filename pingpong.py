@@ -83,7 +83,7 @@ def GameLogToLeaderboard(gl):
         board.iloc[i-5, board.columns.get_loc('Player')] = player_name
         board.iloc[i-5, board.columns.get_loc('ELO Rating')] = int(gl.iloc[-1,i])
 
-        ul = gl.loc[(gl['P1_Name'] == player_name) | (gl['P2_Name'] == player_name)]
+        ul = gl.loc[(gl['P1_Name'] == player_name) | (gl['P2_Name'] == player_name) | (gl['Timestamp'] == 'initialize')]
 
         # Compute wins & losses 
         wins = 0
@@ -104,7 +104,7 @@ def GameLogToLeaderboard(gl):
         board.iloc[i-5, board.columns.get_loc('Win %')] = win_percent
 
         # Calculate average opponent ELO rating
-        ul = ul.iloc[:,:5]
+        ul = ul.iloc[1:,:5]     # removes "initialize" row
         opponent_sum = 0 
         for j in range(0, ul.shape[0]):
             if ul.iloc[j,1] == player_name:
