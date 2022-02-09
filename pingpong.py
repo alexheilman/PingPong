@@ -212,8 +212,6 @@ def AddGame(p1_name, p1_score, p2_name, p2_score):
 
 def CheckRatings(p1_name, p2_name):
     gl = DownloadDF('game_log.csv')
-    #gl = PopulateRatings(gl)
-    #lb = GameLogToLeaderboard(gl)
     lb = DownloadDF('leaderboard.csv')
 
     gl_p1 = AddGame(p1_name, 21, p2_name, 0)
@@ -221,28 +219,35 @@ def CheckRatings(p1_name, p2_name):
 
     lb_p1 = GameLogToLeaderboard(gl_p1)
     lb_p2 = GameLogToLeaderboard(gl_p2)
+
+    # Current - Average Z-Score
+    p1_now_z = round(float(lb.loc[lb['Player'] == p1_name, 'Average Z-Score'].values), 3)
+    p2_now_z = round(float(lb.loc[lb['Player'] == p2_name, 'Average Z-Score'].values), 3)
     
-    # change in composite for p1 winning
-    p1_win = round(float(lb_p1.loc[lb_p1['Player'] == p1_name, 'Average Z-Score'].values \
-            - lb.loc[lb['Player'] == p1_name, 'Average Z-Score'].values),2)
-    p2_lose= round(float(lb_p1.loc[lb_p1['Player'] == p2_name, 'Average Z-Score'].values \
-            - lb.loc[lb['Player'] == p2_name, 'Average Z-Score'].values),2)
+    # P1 Win - Average Z-Score
+    p1_win_z = round(float(lb_p1.loc[lb_p1['Player'] == p1_name, 'Average Z-Score'].values), 3)
+    p2_lose_z= round(float(lb_p1.loc[lb_p1['Player'] == p2_name, 'Average Z-Score'].values), 3)
 
-    # change in composite for p2 winning
-    p2_win = round(float(lb_p2.loc[lb_p2['Player'] == p2_name, 'Average Z-Score'].values \
-            - lb.loc[lb['Player'] == p2_name, 'Average Z-Score'].values),2)
-    p1_lose= round(float(lb_p2.loc[lb_p2['Player'] == p1_name, 'Average Z-Score'].values \
-            - lb.loc[lb['Player'] == p1_name, 'Average Z-Score'].values),2)
+    # P2 Win - Average Z-Score
+    p2_win_z = round(float(lb_p2.loc[lb_p2['Player'] == p2_name, 'Average Z-Score'].values), 3)
+    p1_lose_z= round(float(lb_p2.loc[lb_p2['Player'] == p1_name, 'Average Z-Score'].values), 3)
 
-    # change in rank for p1 winning
+    # Current - Rank
+    p1_now_rank = int(lb.loc[lb['Player'] == p1_name, 'Rank'].values)
+    p2_now_rank = int(lb.loc[lb['Player'] == p2_name, 'Rank'].values) 
+
+    # P1 Win - Rank
     p1_win_rank = int(lb_p1.loc[lb_p1['Player'] == p1_name, 'Rank'].values)
     p2_lose_rank= int(lb_p1.loc[lb_p1['Player'] == p2_name, 'Rank'].values) 
 
-    # change in rank for p2 winning
+    # P2 Win - Rank
     p2_win_rank = int(lb_p2.loc[lb_p2['Player'] == p2_name, 'Rank'].values)
     p1_lose_rank= int(lb_p2.loc[lb_p2['Player'] == p1_name, 'Rank'].values)
 
-    return p1_win, p1_lose, p2_win, p2_lose, p1_win_rank, p1_lose_rank, p2_win_rank, p2_lose_rank
+    return p1_now_z, p1_win_z, p1_lose_z, \
+           p2_now_z, p2_win_z, p2_lose_z, \
+           p1_now_rank, p1_win_rank, p1_lose_rank, \
+           p2_now_rank, p2_win_rank, p2_lose_rank
 
 
 # ---------
@@ -329,12 +334,17 @@ def calculator():
         p1_name = request.form.get("p1_name")
         p2_name = request.form.get("p2_name")
 
-        p1_win, p1_lose, p2_win, p2_lose, p1_win_rank, p1_lose_rank, p2_win_rank, p2_lose_rank = CheckRatings(p1_name, p2_name)
+        p1_now_z, p1_win_z, p1_lose_z, \
+        p2_now_z, p2_win_z, p2_lose_z, \
+        p1_now_rank, p1_win_rank, p1_lose_rank, \
+        p2_now_rank, p2_win_rank, p2_lose_rank = CheckRatings(p1_name, p2_name)
         
-        return render_template("calculator.html", players = player_list, \
-            p1_win = p1_win, p1_lose = p1_lose, p2_win = p2_win, p2_lose= p2_lose,\
-            p1_name = p1_name, p2_name = p2_name, p1_win_rank = p1_win_rank, \
-            p1_lose_rank = p1_lose_rank, p2_win_rank = p2_win_rank, p2_lose_rank = p2_lose_rank,)
+        return render_template("calculator.html", \
+            players = player_list, p1_name = p1_name, p2_name = p2_name, \
+            p1_now_z = p1_now_z, p1_win_z = p1_win_z, p1_lose_z = p1_lose_z, \
+            p2_now_z = p2_now_z, p2_win_z = p2_win_z, p2_lose_z = p2_lose_z, \
+            p1_now_rank = p1_now_rank, p1_win_rank = p1_win_rank, p1_lose_rank = p1_lose_rank, \
+            p2_now_rank = p2_now_rank, p2_win_rank = p2_win_rank, p2_lose_rank = p2_lose_rank)
     else:
         return render_template("calculator.html", players = player_list)
 

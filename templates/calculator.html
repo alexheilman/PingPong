@@ -6,7 +6,7 @@ Calculator
 {% block content %}
 <form action="" method="post">
 
-	<p>Calculate effect on ratings for a potential matchup:</p>
+	<p>Calculate outcome of a potential matchup:</p>
 	<p>	
 		<select name= p1_name  method="GET" action="/">
     	{% for player in players %}
@@ -34,32 +34,37 @@ Calculator
 		<table>
 			<tr>
 				<th>Player &emsp;&emsp;</th>
-				<th>Stat &emsp;&emsp;</th>
+				<th>Statistic &emsp;&emsp;</th>
     			<th>Win &emsp;&emsp;</th>
+                <th>Current &emsp;&emsp;</th>
     			<th>Lose &emsp;&emsp;</th>
 			</tr>
 			<tr>
 				<td>{{p1_name}} &emsp;&emsp;</td>
-				<td>Δ Composite Z-Score &emsp;&emsp;</td>
-				<td>{{p1_win}}</td>
-				<td>{{p1_lose}}</td>
+				<td>Average Z-Score &emsp;&emsp;</td>
+				<td>{{p1_win_z}}</td>
+                <td>{{p1_now_z}}</td>
+				<td>{{p1_lose_z}}</td>
 			</tr>
 			<tr>
 				<td>&emsp;&emsp;</td>
-				<td>New Rank &emsp;&emsp;</td>
+				<td>Rank &emsp;&emsp;</td>
 				<td>{{p1_win_rank}}</td>
+                <td>{{p1_now_rank}}</td>
 				<td>{{p1_lose_rank}}</td>
 			</tr>
 			<tr>
 				<td>{{p2_name}} &emsp;&emsp;</td>
-				<td>Δ Composite Z-Score &emsp;&emsp;</td>
-				<td>{{p2_win}}</td>
-				<td>{{p2_lose}}</td>
+				<td>Average Z-Score &emsp;&emsp;</td>
+				<td>{{p2_win_z}}</td>
+                <td>{{p2_now_z}}</td>
+				<td>{{p2_lose_z}}</td>
 			</tr>
 			<tr>
 				<td>&emsp;&emsp;</td>
-				<td>New Rank &emsp;&emsp;</td>
+				<td>Rank &emsp;&emsp;</td>
 				<td>{{p2_win_rank}}</td>
+                <td>{{p2_now_rank}}</td>
 				<td>{{p2_lose_rank}}</td>
 			</tr>
 		</table>
