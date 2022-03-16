@@ -276,6 +276,9 @@ def home():
     if gl.shape[0] >= 11:
         gl_recent = gl.iloc[-10:, :5]
         gl_recent = gl_recent.astype({'P1_Score':int, 'P2_Score':int})
+    elif gl.shape[0] > 1 and gl.shape[0] < 11:
+        gl_recent = gl.iloc[1:, :5]
+        gl_recent = gl_recent.astype({'P1_Score':int, 'P2_Score':int})
     else:
         gl_recent = gl.iloc[1:, :5]
 
