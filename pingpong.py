@@ -119,15 +119,26 @@ def GameLogToLeaderboard(gl):
             board.iloc[i-5, np.where(board.columns.values == 'Avg Opp ELO')[0][0]] = 0
 
     # Z-Score of ELO Rating
-    board['Z(ELO Rating)'] = (board['ELO Rating'] - board["ELO Rating"].mean()) / board["ELO Rating"].std()
+    if board["ELO Rating"].std() != 0:
+        board['Z(ELO Rating)'] = (board['ELO Rating'] - board["ELO Rating"].mean()) / board["ELO Rating"].std()
+    else:
+        board['Z(ELO Rating)'] = 0
 
     # Z-Score of Average Opponent ELO Rating
-    temp = board["Avg Opp ELO"]
-    temp = temp.replace(0, np.NaN)
-    board['Z(Avg Opp ELO)'] = (board['Avg Opp ELO'] - temp.mean()) / temp.std()
+    temp = board.copy(deep=False)
+    temp = temp["Avg Opp ELO"]
+    #temp = temp.replace(0, np.NaN)
+
+    if temp.std() != 0:
+        board['Z(Avg Opp ELO)'] = (board['Avg Opp ELO'] - temp.mean()) / temp.std()
+    else:
+        board['Z(Avg Opp ELO)'] = 0
 
     # Z-Score of win percentage
-    board['Z(Win %)'] = (board['Win %'] - board["Win %"].mean()) / board["Win %"].std()
+    if board["Win %"].std() != 0:
+        board['Z(Win %)'] = (board['Win %'] - board["Win %"].mean()) / board["Win %"].std()
+    else:
+        board['Z(Win %)'] = 0
 
 
     # Calculate composite rating [Rating + (Avg Opponent - 1500)]
@@ -141,6 +152,7 @@ def GameLogToLeaderboard(gl):
     board['Rank'] = board['Average Z-Score'].rank(method='min', ascending=False)
 
     board = board.astype({'Rank':int, 'Average Z-Score':float, 'Z(ELO Rating)':float, 'Z(Avg Opp ELO)':float, 'Win %':float,'Z(Win %)':float})
+
     board = board.round({'Average Z-Score':3, 'Z(ELO Rating)':2, 'Z(Avg Opp ELO)':2,'Win %':2 ,'Z(Win %)':2})
 
     return board
