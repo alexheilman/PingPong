@@ -137,15 +137,10 @@ def GameLogToLeaderboard(gl):
     # remove player from leaderboard
     board = board[board.Player != 'Seth Brathovd']
 
-    # Add Rank Labels
-    board.iloc[0, board.columns.get_loc('Rank')] = 1
-    for i in range(1,board.shape[0]):
-        if board.iloc[i, board.columns.get_loc('Average Z-Score')] < board.iloc[i-1, board.columns.get_loc('Average Z-Score')]:
-            board.iloc[i, board.columns.get_loc('Rank')] = i + 1
-        else:
-            board.iloc[i, board.columns.get_loc('Rank')] = board.iloc[i-1, board.columns.get_loc('Rank')]
+    # Add Rank
+    board['Rank'] = board['Average Z-Score'].rank(method='min', ascending=False)
 
-    board = board.astype({'Average Z-Score':float, 'Z(ELO Rating)':float, 'Z(Avg Opp ELO)':float, 'Win %':float,'Z(Win %)':float})
+    board = board.astype({'Rank':int, 'Average Z-Score':float, 'Z(ELO Rating)':float, 'Z(Avg Opp ELO)':float, 'Win %':float,'Z(Win %)':float})
     board = board.round({'Average Z-Score':3, 'Z(ELO Rating)':2, 'Z(Avg Opp ELO)':2,'Win %':2 ,'Z(Win %)':2})
 
     return board
@@ -266,8 +261,12 @@ def home():
     lb = lb.iloc[:, :9]
 
     # Pull most recent 10 games to display on homepage
-    gl_recent = gl.iloc[-10:, :5]
-    gl_recent = gl_recent.astype({'P1_Score':int, 'P2_Score':int})
+    if gl.shape[0] >= 11:
+        gl_recent = gl.iloc[-10:, :5]
+        gl_recent = gl_recent.astype({'P1_Score':int, 'P2_Score':int})
+    else:
+        gl_recent = gl.iloc[1:, :5]
+
     gl_recent = gl_recent.sort_values(by=['Timestamp'], ascending = False)
 
     # registration completion routes home, update global players list
