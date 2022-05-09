@@ -37,6 +37,9 @@ def UploadDF(df, filename):
 #   Functions
 # -------------
 
+gl_filename = 'game_log.csv'
+lb_filename = 'leaderboard.csv'
+
 # Ratings populated from start to finish
 # Needed for refresh page in case previous games need to be removed
 # because future ratings depend on previous ratings
@@ -125,9 +128,9 @@ def GameLogToLeaderboard(gl):
         board['Z(ELO Rating)'] = 0
 
     # Z-Score of Average Opponent ELO Rating
-    temp = board.copy(deep=False)
+    temp = board.copy(deep=True)
     temp = temp["Avg Opp ELO"]
-    #temp = temp.replace(0, np.NaN)
+    temp = temp.replace(0, np.NaN) # exclude players w/ Avg Opp ELO = 0 from standard deviation calculation
 
     if temp.std() != 0:
         board['Z(Avg Opp ELO)'] = (board['Avg Opp ELO'] - temp.mean()) / temp.std()
@@ -159,21 +162,21 @@ def GameLogToLeaderboard(gl):
 
 
 def AddPlayer(name):
-    gl = DownloadDF('game_log.csv')
+    gl = DownloadDF(gl_filename)
 
     if name not in gl.columns.values[5:]:
         gl[name] = 1500
     else:
         pass
 
-    UploadDF(gl, 'game_log.csv')
+    UploadDF(gl, gl_filename)
 
     lb = GameLogToLeaderboard(gl)
-    UploadDF(lb, 'leaderboard.csv')
+    UploadDF(lb, lb_filename)
 
 
 def AddGame(p1_name, p1_score, p2_name, p2_score):
-    gl = DownloadDF('game_log.csv')
+    gl = DownloadDF(gl_filename)
 
     # empty new row
     gl = gl.reindex(gl.index.tolist() + list(range(gl.shape[0], gl.shape[0]+1)))
@@ -218,8 +221,8 @@ def AddGame(p1_name, p1_score, p2_name, p2_score):
 
 
 def CheckRatings(p1_name, p2_name):
-    gl = DownloadDF('game_log.csv')
-    lb = DownloadDF('leaderboard.csv')
+    gl = DownloadDF(gl_filename)
+    lb = DownloadDF(lb_filename)
 
     gl_p1 = AddGame(p1_name, 21, p2_name, 0)
     gl_p2 = AddGame(p1_name, 0, p2_name, 21)
@@ -266,8 +269,8 @@ player_list = []
 
 @app.route("/", methods=["POST", "GET"])
 def home():
-    gl = DownloadDF('game_log.csv')
-    lb = DownloadDF('leaderboard.csv')
+    gl = DownloadDF(gl_filename)
+    lb = DownloadDF(lb_filename)
 
     # hide wins and loss quantity
     lb = lb.iloc[:, :9]
@@ -321,10 +324,10 @@ def submit():
         # don't update leaderboard if score is a player vs themself
         if (p1_name != p2_name):
             gl = AddGame(p1_name, p1_score, p2_name, p2_score)
-            UploadDF(gl, 'game_log.csv')
+            UploadDF(gl, gl_filename)
 
             lb = GameLogToLeaderboard(gl)
-            UploadDF(lb, 'leaderboard.csv')
+            UploadDF(lb, lb_filename)
 
         return redirect(url_for("home"))
     else:
@@ -365,7 +368,7 @@ def calculator():
 
 @app.route("/<name>")
 def user(name):
-    gl = DownloadDF('game_log.csv')
+    gl = DownloadDF(gl_filename)
     ul = gl.loc[(gl['P1_Name'] == name) | (gl['P2_Name'] == name)]
     ul = ul.iloc[:,:5]
     ul = ul.astype({'P1_Score':int, 'P2_Score':int})
@@ -377,12 +380,12 @@ def user(name):
 
 @app.route("/refresh", methods=["POST", "GET"])
 def refresh():
-    gl = DownloadDF('game_log.csv')
+    gl = DownloadDF(gl_filename)
     gl = PopulateRatings(gl)
-    UploadDF(gl, 'game_log.csv')
+    UploadDF(gl, gl_filename)
 
     lb = GameLogToLeaderboard(gl)
-    UploadDF(lb, 'leaderboard.csv')
+    UploadDF(lb, lb_filename)
 
     return redirect(url_for("home"))
 
