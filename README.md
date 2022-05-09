@@ -1,5 +1,5 @@
 # PingPong
-### Hosted interactive ELO rankings for company ping pong players.
+### Hosted interactive Elo rankings for company ping pong players.
 ### https://www.tothpingpong.com
  
 - Flask framework
